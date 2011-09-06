@@ -1,0 +1,254 @@
+<?php
+
+// $Id: userpoints_field.module,v 1.1 2011/01/10 22:53:38 lobo235 Exp $
+
+/**
+ * @file
+ */
+
+/**
+ * Implementation of hook_userpoints().
+ */
+function userpoints_field_userpoints( $op, $params = array( ) ) {
+  switch ( $op ) {
+    case 'setting':
+      $form[ 'field' ] = array(
+          '#type' => 'fieldset',
+          '#theme' => 'userpoints_field_settings',
+          '#title' => t( 'CCK Field settings' ),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+      );
+
+      // Load the category list.
+      $tree = taxonomy_get_tree( userpoints_get_vid() );
+      $category_options = array( );
+      $category_options[ 0 ] = t( '!Uncategorized', userpoints_translation() );
+      if ( !empty( $tree ) ) {
+        foreach ( $tree as $term ) {
+          $category_options[ $term->tid ] = str_repeat( '--', $term->depth ) . $term->name;
+        }
+      }
+
+      // create a settings form for each content type
+      $content_types = content_types();
+      foreach ( $content_types as $key => $val ) {
+        // Only show this content type if it has fields that can be configured.
+        if ( count( $val[ 'fields' ] ) > 0 ) {
+          // add all fields for this content type
+          foreach ( $val[ 'fields' ] as $field ) {
+            $form[ 'field' ][ 'userpoints_field_updater_points_' . $key . '_' . $field[ 'field_name' ] ] = array(
+                '#type' => 'textfield',
+                '#default_value' => variable_get( 'userpoints_field_updater_points_' . $key . '_' . $field[ 'field_name' ], 0 ),
+                '#size' => 5,
+                '#maxlength' => 5,
+            );
+            $form[ 'field' ][ 'userpoints_field_updater_category_' . $key . '_' . $field[ 'field_name' ] ] = array(
+                '#type' => 'select',
+                '#options' => $category_options,
+                '#default_value' => variable_get( 'userpoints_field_updater_category_' . $key . '_' . $field[ 'field_name' ], 0 ),
+            );
+            $form[ 'field' ][ 'userpoints_field_author_points_' . $key . '_' . $field[ 'field_name' ] ] = array(
+                '#type' => 'textfield',
+                '#default_value' => variable_get( 'userpoints_field_author_points_' . $key . '_' . $field[ 'field_name' ], 0 ),
+                '#size' => 5,
+                '#maxlength' => 5,
+            );
+            $form[ 'field' ][ 'userpoints_field_author_category_' . $key . '_' . $field[ 'field_name' ] ] = array(
+                '#type' => 'select',
+                '#options' => $category_options,
+                '#default_value' => variable_get( 'userpoints_field_author_category_' . $key . '_' . $field[ 'field_name' ], 0 ),
+            );
+            $form[ 'field' ][ 'userpoints_field_moderate_' . $key . '_' . $field[ 'field_name' ] ] = array(
+                '#type' => 'checkbox',
+                '#default_value' => variable_get( 'userpoints_field_moderate_' . $key . '_' . $field[ 'field_name' ], 0 ),
+            );
+          }
+        }
+      }
+
+      // Add some definitions at the bottom to help clarify what things mean.
+      $form[ 'field' ][ 'userpoints_field_help' ] = array(
+          '#type' => 'fieldset',
+          '#title' => t( 'Userpoints CCK Field Help' ),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+      );
+
+      $form[ 'field' ][ 'userpoints_field_help' ][ 'info' ] = array(
+          '#value' => '
+      <p>The Userpoints CCK Field module will give users points for adding values to specific CCK fields. If values are removed they will lose points.</p>
+      <dl><dt>Updating User Points</dt><dd>These points are given to the user who updates the field (unless they are already the author of the node). For fields that accept multiple values, these points will be multiplied by the number of values stored in the field.</dd></dl>
+      <dl><dt>Updating User Category</dt><dd>This is the category to which "Updating User Points" are added.</dd></dl>
+      <dl><dt>Author Points</dt><dd>These points are given to the user who is the author of the node. For fields that accept multiple values, these points will be multiplied by the number of values stored in the field.</dd></dl>
+      <dl><dt>Author Category</dt><dd>This is the category to which "Author Points" are added.</dd></dl>
+      <dl><dt>Moderate</dt><dd>Points will need to be approved by a moderator if this is selected.</dd></dl>',
+      );
+
+      return $form;
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function userpoints_field_theme() {
+  return array(
+      'userpoints_field_settings' => array( 'form' => NULL )
+  );
+}
+
+/**
+ * Theme the userpoints field settings form.
+ */
+function theme_userpoints_field_settings( $form ) {
+  $rows = array( );
+
+  $header = array(
+      t( 'Content Type' ),
+      t( 'Field' ),
+      t( 'Updating User !Points', userpoints_translation() ),
+      t( 'Updating User Category' ),
+      t( 'Author !Points', userpoints_translation() ),
+      t( 'Author Category' ),
+      t( 'Moderate' )
+  );
+
+  foreach ( content_types ( ) as $key => $content_type ) {
+    //// Only show this content type if it has fields that can be configured.
+    if ( count( $content_type[ 'fields' ] ) > 0 ) {
+      // add all fields for this content type
+      foreach ( $content_type[ 'fields' ] as $field ) {
+        $row = array(
+            $content_type[ 'name' ],
+            $field[ 'field_name' ],
+            drupal_render( $form[ 'userpoints_field_updater_points_' . $key . '_' . $field[ 'field_name' ] ] ),
+            drupal_render( $form[ 'userpoints_field_updater_category_' . $key . '_' . $field[ 'field_name' ] ] ),
+            drupal_render( $form[ 'userpoints_field_author_points_' . $key . '_' . $field[ 'field_name' ] ] ),
+            drupal_render( $form[ 'userpoints_field_author_category_' . $key . '_' . $field[ 'field_name' ] ] ),
+            drupal_render( $form[ 'userpoints_field_moderate_' . $key . '_' . $field[ 'field_name' ] ] ),
+        );
+        $rows[ ] = $row;
+      }
+    }
+  }
+
+  $output = theme( 'table', $header, $rows );
+  $output .= drupal_render( $form );
+
+  return $output;
+}
+
+/**
+ * Implementation of hook_nodeapi()
+ */
+function userpoints_field_nodeapi( &$node, $op ) {
+  switch ( $op ) {
+    case 'delete': // remove userpoints earned for this field
+      $content_type = content_types( $node->type );
+      foreach ( $content_type[ 'fields' ] as $field ) {
+        $updater_points = variable_get( 'userpoints_field_updater_points_' . $node->type . '_' . $field[ 'field_name' ], 0 );
+        if ( $updater_points != 0 ) {
+          _userpoints_field_give_points( 'take', 'updater', $updater_points, $node, $field );
+        }
+
+        $author_points = variable_get( 'userpoints_field_author_points_' . $node->type . '_' . $field[ 'field_name' ], 0 );
+        if ( $author_points != 0 ) {
+          _userpoints_field_give_points( 'take', 'author', $author_points, $node, $field );
+        }
+      }
+      break;
+    case 'presave': // add userpoints earned for this field
+      $content_type = content_types( $node->type );
+      foreach ( $content_type[ 'fields' ] as $field ) {
+        $updater_points = variable_get( 'userpoints_field_updater_points_' . $node->type . '_' . $field[ 'field_name' ], 0 );
+        if ( $updater_points != 0 ) {
+          $old_node = node_load( $node->nid );
+          $field_val = $node->{$field[ 'field_name' ]};
+          $old_field_val = $old_node->{$field[ 'field_name' ]};
+          $num_values = _userpoints_field_count_values( $field[ 'type' ], $field_val );
+          $old_num_values = _userpoints_field_count_values( $field[ 'type' ], $old_field_val );
+          $pointsoffset = $num_values - $old_num_values;
+          _userpoints_field_give_points( 'give', 'updater', $updater_points * $pointsoffset, $node, $field );
+        }
+
+        $author_points = variable_get( 'userpoints_field_author_points_' . $node->type . '_' . $field[ 'field_name' ], 0 );
+        if ( $author_points != 0 ) {
+          $old_node = node_load( $node->nid );
+          $field_val = $node->{$field[ 'field_name' ]};
+          $old_field_val = $old_node->{$field[ 'field_name' ]};
+          $num_values = _userpoints_field_count_values( $field[ 'type' ], $field_val );
+          $old_num_values = _userpoints_field_count_values( $field[ 'type' ], $old_field_val );
+          $pointsoffset = $num_values - $old_num_values;
+          _userpoints_field_give_points( 'give', 'author', $author_points * $pointsoffset, $node, $field );
+        }
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * Get the user id of the author of a node.
+ */
+function _userpoints_field_get_node_author( $nid ) {
+  return db_result( db_query_range( "SELECT uid FROM {node} WHERE nid = %d", $nid, 0, 1 ) );
+}
+
+/**
+ * Check field values and then give/take points according to the values saved in the field
+ */
+function _userpoints_field_give_points( $action, $user_type, $num_points, $node, $field ) {
+  $field_val = $node->{$field[ 'field_name' ]};
+
+  $params = array(
+      'points' => ($action == 'flag' ? $author_points : -1 * $author_points),
+      'moderate' => variable_get( 'userpoints_field_moderate_' . $node->type . '_' . $field[ 'field_name' ], 0 ),
+      'entity_id' => $node->nid,
+      'entity_type' => 'node',
+      'description' => t( 'Field: !content_id, !field_name', array( '!content_id' => $node->nid, '!field_name' => $field[ 'field_name' ] ) ),
+      'operation' => $field[ 'field_name' ] . ' changed',
+  );
+
+  if ( $user_type == 'updater' && $user->uid != $node->uid ) { // authors do not get double points for updating fields of their own nodes.
+    $params[ 'uid' ] = $user->uid;
+    $params[ 'tid' ] = variable_get( 'userpoints_field_updater_category_' . $node->type . '_' . $field[ 'field_name' ], 0 );
+  }
+  elseif ( $user_type == 'author' ) {
+    $params[ 'uid' ] = $node->uid;
+    $params[ 'tid' ] = variable_get( 'userpoints_field_author_category_' . $node->type . '_' . $field[ 'field_name' ], 0 );
+  }
+
+  if ( $action == 'take' )
+    $params[ 'points' ] = $num_points;
+  elseif ( $action == 'give' )
+    $params[ 'points' ] = $num_points;
+
+  userpoints_userpointsapi( $params );
+}
+
+/**
+ * Counts the number of stored values in a CCK field
+ */
+function _userpoints_field_count_values( $type, $field ) {
+  $num_values = 0;
+  switch ( $type ) {
+    case 'filefield':
+      if( $field )
+      {
+        foreach ( $field as $instance ) {
+          if ( trim( $instance[ 'filename' ] ) != '' )
+            $num_values++;
+        }
+      }
+      break;
+    default:
+      foreach ( $field as $instance ) {
+        if ( trim( $instance[ 'value' ] ) != '' )
+          $num_values++;
+      }
+      break;
+  }
+  return $num_values;
+}

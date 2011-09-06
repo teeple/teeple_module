@@ -1,0 +1,17 @@
+--- json_server.js	2010-05-04 16:04:26.000000000 -0400
++++ json_server_patched.js	2010-12-14 18:26:47.000000000 -0500
+@@ -13,8 +13,13 @@ Drupal.toJson = function(v) {
+       return '"'+ v +'"';
+     case 'object':
+       var output = "{";
++      
++      var in_loop = false;
+       for(i in v) {
+-        output = output + i + ":" + Drupal.toJson(v[i]) + ",";
++    	
++        output = output + (in_loop?", ":"")+ i + ":" + Drupal.toJson(v[i]);
++        
++        in_loop = true;
+       }
+       output = output + "}";
+       return output;

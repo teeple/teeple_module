@@ -1,0 +1,11 @@
+name = Accesslog (General)
+description = Recent referrers block and recent access page. Access logging must be enabled at /admin/reports/settings for results.
+package = Accesslog
+dependencies[] = statistics
+
+; Information added by drupal.org packaging script on 2010-10-20
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "views_examples"
+datestamp = "1287546072"
+

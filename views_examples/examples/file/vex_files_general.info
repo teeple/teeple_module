@@ -1,0 +1,10 @@
+name = Files (General)
+description = Recent files blocks, recent files page, and search files page.
+package = File
+
+; Information added by drupal.org packaging script on 2010-10-20
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "views_examples"
+datestamp = "1287546072"
+

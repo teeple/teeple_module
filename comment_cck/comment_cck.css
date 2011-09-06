@@ -1,0 +1,10 @@
+/* $Id: comment_cck.css,v 1.2 2008/07/14 20:30:44 killes Exp $ */
+
+table.comment_cck {
+  margin: 0;
+  width: auto;
+}
+
+table.comment_cck tr td, table.comment_cck tr th {
+  padding: 0 .3em;
+}

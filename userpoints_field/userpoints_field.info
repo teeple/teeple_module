@@ -1,0 +1,13 @@
+; $Id: userpoints_field.info,v 1.1 2011/01/10 22:53:38 lobo235 Exp $
+name = Userpoints CCK Field
+description = Gives userpoints for populating specific CCK fields
+package = Userpoints
+core = 6.x
+dependencies[] = userpoints
+dependencies[] = content
+; Information added by drupal.org packaging script on 2011-01-10
+version = "6.x-1.0"
+core = "6.x"
+project = "userpoints_field"
+datestamp = "1294700787"
+

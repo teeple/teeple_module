@@ -1,0 +1,162 @@
+<?php
+// $Id: user_relationship_service.module,v 1.1.2.1 2009/07/06 10:24:44 alexk Exp $
+/**
+ * @author Drupal 6 port by Darren Ferguson <http://drupal.org/user/70179>
+ * @author Written by scottgifford http://drupal.org/user/245699
+ * @file Link general user relationship functionalities to services module.
+ */
+
+function user_relationship_tvchat_service_perm() {
+    return array(
+        'user_relationship_tvchat_service from remote',
+    );
+}
+
+/**
+ * Implementation of hook_service().
+ */
+function user_relationship_tvchat_service_service() {
+  return array(
+
+    array(
+      '#method' => 'user_relationships.mineWithType',
+      '#callback' => 'user_relationship_tvchat_service_mine_with_type',
+      '#access arguments' => array('user_relationship_tvchat_service from remote'),
+      '#file' => array('file' => 'inc', 'module' => 'user_relationship_tvchat_service'),
+      '#args' => array(
+        array(
+            '#name' => 'version',
+            '#type' => 'int',
+            '#description' => t('API version to use'),
+          ),
+        array(
+            '#name' => 'type_name',
+            '#type' => 'string',
+            '#description' => t('API version to use'),
+          ),
+      ),
+      '#return' => 'array',
+      '#help' => t('Get a list of my relationships'),
+    ),
+
+    array(
+      '#method' => 'user_relationships.mineWithParams',
+      '#callback' => 'user_relationship_tvchat_service_mine_with_params',
+      '#access arguments' => array('user_relationship_tvchat_service from remote'),
+      '#file' => array('file' => 'inc', 'module' => 'user_relationship_tvchat_service'),
+      '#args' => array(
+        array(
+            '#name' => 'version',
+            '#type' => 'int',
+            '#description' => t('API version to use'),
+          ),
+        array(
+            '#name' => 'type_name',
+            '#type' => 'string',
+            '#description' => t('type name ex) "Friend" '),
+          ),
+          array(
+            '#name' => 'received',
+            '#type' => 'string',
+            '#description' => t('default - to me or from me , 1 - only to me'),
+          ),
+      ),
+      '#return' => 'array',
+      '#help' => t('Get a list of my relationships'),
+    ),
+
+    array(
+      '#method' => 'user_relationships.deleteWithUid',
+      '#callback' => 'user_relationship_tvchat_service_delete_with_uid',
+      '#access arguments' => array('user_relationship_tvchat_service from remote'),
+      '#file' => array('file' => 'inc', 'module' => 'user_relationship_tvchat_service'),
+      '#args' => array(
+        array(
+          '#name' => 'version',
+          '#type' => 'int',
+          '#description' => t('API version to use'),
+        ),
+        array(
+          '#name' => 'uid',
+          '#type' => 'int',
+          '#description' => t('user id to delete'),
+        ),
+        array(
+          '#name' => 'type_name',
+          '#type' => 'string',
+          '#description' => t('relationship type name (cancel, disapprove, remove)'),
+        ),
+      ),
+      '#return' => 'boolean',
+      '#help' => t('Delete an existing or pending relationship'),
+    ),
+
+    array(
+      '#method' => 'user_relationships.approveWithRids',
+      '#callback' => 'user_relationship_tvchat_service_approve_with_rids',
+      '#access arguments' => array('user_relationship_tvchat_service from remote'),
+      '#file' => array('file' => 'inc', 'module' => 'user_relationship_tvchat_service'),
+      '#args' => array(
+        array(
+    '#name' => 'version',
+    '#type' => 'int',
+    '#description' => t('API version to use'),
+  ),
+        array(
+          '#name' => 'rid_list',
+          '#type' => 'array',
+          '#description' => t('Relationship ID to approve'),
+        ),
+      ),
+      '#return' => 'struct',
+      '#help' => t('Approve a requested relationship'),
+    ),
+
+    array(
+      '#method' => 'user_relationships.approveWithParams',
+      '#callback' => 'user_relationship_tvchat_service_approve_with_params',
+      '#access arguments' => array('user_relationship_tvchat_service from remote'),
+      '#file' => array('file' => 'inc', 'module' => 'user_relationship_tvchat_service'),
+      '#args' => array(
+        array(
+            '#name' => 'version',
+            '#type' => 'int',
+            '#description' => t('API version to use'),
+          ),
+        array(
+            '#name' => 'type_name',
+            '#type' => 'string',
+            '#description' => t('type name - Friend'),
+          ),
+        array(
+          '#name' => 'fr_uid',
+          '#type' => 'int',
+          '#description' => t('Friends Uid to approve'),
+        ),
+      ),
+      '#return' => 'struct',
+      '#help' => t('Approve a requested relationship'),
+    ),
+
+    array(
+      '#method' => 'user_relationships.fb_list',
+      '#callback' => 'user_relationship_tvchat_service_fb_list',
+      '#access arguments' => array('user_relationship_tvchat_service from remote'),
+      '#file' => array('file' => 'inc', 'module' => 'user_relationship_tvchat_service'),
+      '#args' => array(
+        array(
+          '#name' => 'version',
+          '#type' => 'int',
+          '#description' => t('API version to use'),
+        ),
+        array(
+          '#name' => 'fb_friends',
+          '#type' => 'array',
+          '#description' => t('List of facebook friends'),
+        ),
+      ),
+      '#return' => 'struct',
+      '#help' => t('List of facebook friends only who are subscribers of socialTV'),
+    ),
+  );
+}

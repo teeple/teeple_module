@@ -1,0 +1,13 @@
+name = Tvchat Service
+description = Tvchat Service.
+package = Services - services
+dependencies[] = services
+dependencies[] = tvchat
+core = 6.x
+
+; Information added by drupal.org packaging script on 2011-05-30
+version = "6.x-2.x-dev"
+core = "6.x"
+project = "tvchat_service"
+datestamp = "1306715533"
+

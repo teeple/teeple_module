@@ -1,0 +1,101 @@
+<?php
+
+// $Id$
+
+/**
+ *  @file
+ *    Link general pollfield module functionalities to services module
+ */
+
+/**
+ * Implemetation of hook_perm()
+ */
+function pollfield_service_perm() {
+  return array(
+    'vote issue poll from remote',
+    'create issue poll from remote',
+    'delete issue poll from remote',
+  );
+}
+
+/**
+ *  Implementation of hook_service().
+ */
+function pollfield_service_service() {
+  return array(
+
+    // pollfield.vote
+    array(
+      '#method'             => 'pollfield.vote',
+      '#callback'           => 'pollfield_service_vote',
+      '#access arguments'   => array('vote issue poll from remote'),
+      '#file'               => array('file' => 'inc', 'module' => 'pollfield_service'),
+      '#args'               => array(
+        array(
+          '#name'           => 'nid',
+          '#type'           => 'int',
+          '#optional'       => false,
+          '#description'    => t('issue poll id (node id)')
+        ),
+        array(
+          '#name'           => 'choice',
+          '#type'           => 'int',
+          '#optional'       => false,
+          '#description'    => t('choice number of voting(delta)')
+        ),
+      ),
+      '#return'             => 'bool',
+      '#help'               => t('select one of choices in the issue poll.')
+    ),
+
+    // pollfield.create
+    array(
+      '#method'             => 'pollfield.create',
+      '#callback'           => 'pollfield_service_create',
+      '#access arguments'   => array('create issue poll from remote'),
+      '#file'               => array('file' => 'inc', 'module' => 'pollfield_service'),
+      '#args'               => array(        
+        array(
+          '#name'           => 'nid',
+          '#type'           => 'int',
+          '#optional'       => false,
+          '#description'    => t('referring tvshow id (nid)')
+        ),
+ 
+        array(
+          '#name'           => 'question',
+          '#type'           => 'string',
+          '#optional'       => false,
+          '#description'    => t('issue poll question')
+        ),
+        array(
+          '#name'           => 'choices',
+          '#type'           => 'array',
+          '#optional'       => false,
+          '#description'    => t('choices array')
+        ),
+      ),
+      '#return'             => 'bool',
+      '#help'               => t('create issue poll.')
+    ),
+
+    // pollfield.delete
+    array(
+      '#method'             => 'pollfield.delete',
+      '#callback'           => 'pollfield_service_delete',
+      '#access arguments'   => array('delete issue poll from remote'),
+      '#file'               => array('file' => 'inc', 'module' => 'pollfield_service'),
+      '#args'               => array(        
+        array(
+          '#name'           => 'nid',
+          '#type'           => 'int',
+          '#optional'       => false,
+          '#description'    => t('issue poll id(nid)')
+        ),
+      ),
+      '#return'             => 'bool',
+      '#help'               => t('delete issue poll only if no comment')
+    )
+  );
+}
+

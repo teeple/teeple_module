@@ -1,0 +1,1 @@
+SELECT thread_id, COUNT(DISTINCT mid) as unread_count FROM pm_index pmi WHERE pmi.deleted = 0 AND pmi.is_new = 1 AND pmi.recipient = 19175 GROUP BY thread_id 

@@ -1,0 +1,96 @@
+<?php
+// $Id: comment_cck.install,v 1.3 2009/05/08 18:59:42 coreymitchell Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function comment_cck_install() {
+  drupal_install_schema('comment_cck');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function comment_cck_uninstall() {
+  drupal_uninstall_schema('comment_cck');
+  variable_del('comment_cck_block_author_fields');
+  variable_del('comment_cck_fields_');
+  foreach (node_get_types('names') as $type_name) {
+    variable_del('comment_cck_node_'. $type_name);
+    variable_del('comment_cck_fields_'. $type_name);
+  }
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function comment_cck_schema() {
+  $schema = array();
+
+  $schema['comment_cck_revisions'] = array(
+    'description' => t('This table keeps track of which comments are responsible for which node revisions.'),
+    'fields' => array(
+      'cid' => array(
+        'description' => t('The cid of the comment that corresponds to the revision specified by vid.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'vid' => array(
+        'description' => t('The vid of the revision that corresponds to the comment specified by cid.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+     'previous_vid' => array(
+        'description' => t('The vid of the revision that corresponds to the comment specified by cid.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'unique keys' => array(
+      'vid' => array('vid'),
+    ),
+    'primary key' => array('cid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Change the primary key from vid to cid, since we always select by cid.
+ */
+function comment_cck_update_6000() {
+  $ret = array();
+  db_drop_primary_key($ret, 'comment_cck_revisions');
+  db_add_primary_key($ret, 'comment_cck_revisions', array('cid'));
+  db_add_unique_key($ret, 'comment_cck_revisions', 'vid', array('vid'));
+  return $ret;
+}
+
+/**
+ * The nid field is unnecessary.
+ */
+function comment_cck_update_6001() {
+  $ret = array();
+  db_drop_field($ret, 'comment_cck_revisions', 'nid');
+  return $ret;
+}
+
+/**
+ * Cleanup the database of old variables.
+ */
+function comment_cck_update_6002() {
+  $ret = array();
+  // Remove old per-node-type variables.
+  foreach (node_get_types('names') as $type_name) {
+    variable_del('comment_cck_node_'. $type_name);
+  }
+  // Remove phantom variable.
+  variable_del('comment_cck_fields_');
+  return $ret;
+}

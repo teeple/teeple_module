@@ -1,0 +1,4 @@
+; $Id$
+name = Custom Views
+description = Custom views query for this site.
+core = 6.x

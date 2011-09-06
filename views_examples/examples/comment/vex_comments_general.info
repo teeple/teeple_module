@@ -1,0 +1,10 @@
+name = Comments (General)
+description = Recent comments blocks, recent comments page, and search comments page.
+package = Comment
+
+; Information added by drupal.org packaging script on 2010-10-20
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "views_examples"
+datestamp = "1287546072"
+

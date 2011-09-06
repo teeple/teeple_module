@@ -1,0 +1,138 @@
+<?php
+
+/**
+ * Get an array of all date fields.
+ *
+ * @return
+ *   Array of date fields, keyed by name.
+ */
+function date_deploy_get_date_fields() {
+  // This isn't changing much, so cache it to save some queries.
+  static $date_fields = array();
+
+  if (empty($date_fields)) {
+    // TODO: determine a better way to grab all available date types.
+    $date_types = array('datetime', 'date', 'datestamp');
+    $fields = content_fields();
+    foreach ($fields as $name => $field) {
+      if (in_array($field['type'], $date_types)) {
+        $date_fields[$name] = $field;
+      }
+    }
+  }
+
+  return $date_fields;
+}
+
+/**
+ * Proxy function for rebuilding a date field array. The array structure that
+ * we shall build varies based on widget type, also the date input varies based
+ * on date type.
+ *
+ * @param $date
+ *   An array of date information via a node_load() call.
+ * @param $field
+ *   An array of information for this specific date field.
+ * @return
+ *   An array of date information suitable for drupal_execute() calls.
+ */
+function date_deploy_rebuild_date($date, $field) {
+  switch ($field['type']) {
+    case 'datetime':
+      return date_deploy_rebuild_date_datetime($date, $field);
+  }
+}
+
+/**
+ * Rebuilds 'datetime' dates.
+ *
+ * @see date_deploy_rebuild_date().
+ */
+function date_deploy_rebuild_date_datetime($date, $field) {
+  $rebuild  = array();
+  $timezone_db = new DateTimeZone($date['timezone_db']);
+  $timezone = new DateTimeZone($date['timezone']);
+  $format = isset($field['widget']['input_format_custom']) && $field['widget']['input_format_custom'] ? $field['widget']['input_format_custom'] : $field['widget']['input_format'];
+
+  // Some date fields have a to and from date, so we'll need to account for
+  // that.
+  $value['value'] = new DateTime($date['value'], $timezone_db);
+  $value['value']->setTimezone($timezone);
+
+  if (isset($date['value2'])) {
+    $value['value2'] = new DateTime($date['value2'], $timezone_db);
+    $value['value2']->setTimezone($timezone);
+  }
+
+  foreach($value as $key => $datetime) {
+
+    switch ($field['widget']['type']) {
+      // date_popup requires both "date" and "time" data. Granularity has been
+      // taken into account in the format value available in the field
+      // definition.
+      case 'date_popup':
+        $rebuild[$key]['date'] = $datetime->format(date_limit_format($format, array('year', 'month', 'day')));
+        $rebuild[$key]['time'] = $datetime->format(date_limit_format($format, array('hour', 'minute', 'second')));
+        break;
+
+      // The date_select widget requires a breakdown of each element of the
+      // date. Granularity will be taken into account during validation, so we
+      // don't need to handle it here. For whatever reason "0" is not valid via
+      // FAPI for "minute", only "00".
+      case 'date_select':
+        // We don't use date_parse() here since that function isn't supported
+        // in all version with RHEL. See http://drupal.org/node/924454 .
+        $timestamp = $datetime->format('U');
+        $parts['year'] = date('Y', $timestamp);
+        $parts['month'] = date('n', $timestamp);
+        $parts['day'] = date('j', $timestamp);
+        $parts['hour'] = date('G', $timestamp);
+        $parts['minute'] = date('i', $timestamp);
+        $parts['second'] = date('s', $timestamp);
+
+        $rebuild[$key] = array_intersect_key($parts, array_flip(array('year', 'month', 'day', 'hour', 'minute', 'second')));
+        break;
+
+      // Granularity has yet to be taken into account, so we'll have to handle
+      // it.
+      default:
+        $rebuild[$key]['date'] = $datetime->format(date_limit_format($format, $field['granularity']));
+        break;
+    }
+  }
+
+  return $rebuild;
+}
+
+/**
+ * Implementation of hook_node_deploy().
+ *
+ * @param $node
+ *   The node we're deploying.
+ * @return
+ *   The results of our xmlrpc call.
+ */
+function date_node_deploy(&$node) {
+  // There is a bug somewhere in the FAPI munging in node_deploy() that 
+  // causes date values to get trashed. In order to get around this, we
+  // actually need to node_load() each node as it comes through in order
+  // to retrieve the original date value. !shoot($messenger)
+  $original_node = node_load($node->nid);
+
+  // If we couldn't load it then bail.
+  if (!$original_node = node_load($node->nid)) {
+    return;
+  }  
+  $fields = date_deploy_get_date_fields();
+
+  foreach ($fields as $field_name => $field) {
+    if (property_exists($original_node, $field_name)) {
+      foreach ($original_node->{$field_name} as $key => $date_value) {
+        if (!is_null($date_value['value'])) {
+          unset($node->{$field_name});
+          $node->{$field_name}[$key] = date_deploy_rebuild_date($date_value, $field);
+        }
+      }
+    }
+  } 
+}

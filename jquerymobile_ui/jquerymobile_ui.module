@@ -1,0 +1,243 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Alters the menu form to allow the administrator to specify additional attributes for the menu link
+ */
+define('JQUERYMOBILE_UI_PATH', drupal_get_path('module', 'jquerymobile_ui'));
+ 
+ 
+function jquerymobile_ui_init() {
+ drupal_add_css(JQUERYMOBILE_UI_PATH . '/ui/css/mobile_jquery.css');
+}
+
+function jquerymobile_ui_load_files(&$vars) {
+
+    
+	drupal_add_js(JQUERYMOBILE_UI_PATH . '/ui/js/jquery-1.5.min.js');
+	drupal_add_js(JQUERYMOBILE_UI_PATH . '/ui/js/jquerymobile_ui.js');
+	drupal_add_js(JQUERYMOBILE_UI_PATH . '/ui/js/jquery-mobile-10a3.js');
+	drupal_add_js(_jquerymobile_ui_build_js(), 'inline');
+
+    if (!empty($vars['scripts'])) {
+      $scripts = drupal_add_js();
+      foreach (jquerymobile_ui_replacements() as $type => $replacements) {
+        foreach ($replacements as $find => $replace) {
+          unset($scripts[$type][$find]);
+        }
+      }
+      $vars['scripts'] = drupal_get_js('header', $scripts);
+    }	
+	
+}
+
+function jquerymobile_ui_replacements() {
+  return array(
+    'module' => array(
+      'misc/farbtastic/farbtastic.js' => 'farbtastic.js',
+      'misc/teaser.js' => 'teaser.js',
+      'misc/jquery.form.js' => 'jquery.form.js',
+      'misc/ahah.js' => 'ahah.js',
+      'misc/tabledrag.js' => 'tabledrag.js',
+    ),
+    'core' => array(
+      'misc/tabledrag.js' => 'tabledrag.js',
+    ),
+  );
+}
+
+function _jquerymobile_ui_build_js() {
+  $output = '';//'jqm.extend(  jqm.mobile , {';
+	$output .= "\njqm.mobile.subPageUrlKey = " . drupal_to_js(variable_get('jquerymobile_ui_subPageUrlKey', 'ui-page')) . ";";
+	$output .= "\njqm.mobile.nonHistorySelectors = " . drupal_to_js(variable_get('jquerymobile_ui_nonHistorySelectors', 'dialog')) . ";";
+	$output .= "\njqm.mobile.activePageClass = " . drupal_to_js(variable_get('jquerymobile_ui_activePageClass', 'ui-page-active')) . ";";
+	$output .= "\njqm.mobile.activeBtnClass = " . drupal_to_js((variable_get('jquerymobile_ui_activeBtnClass', 0) == 0)?false:true) . ";";
+	$output .= "\njqm.mobile.ajaxEnabled = " . drupal_to_js((variable_get('jquerymobile_ui_ajaxEnabled', 0) == 0)?false:true) . ";";
+	$output .= "\njqm.mobile.ajaxLinksEnabled = " . drupal_to_js((variable_get('jquerymobile_ui_ajaxLinksEnabled', 0) == 0)?false:true) . ";";
+	$output .= "\njqm.mobile.ajaxFormsEnabled = " . drupal_to_js((variable_get('jquerymobile_ui_ajaxFormsEnabled', 0) == 0)?false:true) . ";";
+	$output .= "\njqm.mobile.autoInitialize = " . drupal_to_js((variable_get('jquerymobile_ui_autoInitialize', 0) == 0)?false:true) . ";";
+	$output .= "\njqm.mobile.defaultTransition = " . drupal_to_js(variable_get('jquerymobile_ui_defaultTransition', 'slide')) . ";";
+	$output .= "\njqm.mobile.loadingMessage = " . drupal_to_js(variable_get('jquerymobile_ui_loadingMessage', 'loading')) . ";";
+	$output .= "\njqm.mobile.metaViewportContent = " . drupal_to_js(variable_get('jquerymobile_ui_metaViewportContent', 'width=device-width, minimum-scale=1, maximum-scale=1')) . ";";
+	//$output .= '});';
+	
+	return $output;
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function jquerymobile_ui_help($path, $arg) {
+  switch ($path) {
+    case 'admin/settings/jquerymobile_ui':
+      return t('The jquerymobile_ui module allows you to set HTML attributes on the element of individual menu items, exposing certain values needed to enhance the <a href="http://drupal.org/project/mobile_jquery">mobile jquery</a> theme.');
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function jquerymobile_ui_menu() {
+  $items = array();
+  $items['admin/settings/jquerymobile_ui'] = array(
+    'title' => 'jQuery Mobile UI Settings',
+    'description' => 'Configure the jQuery Mobile UI module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' =>  array('jquerymobile_ui_admin'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'jquerymobile_ui.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function jquerymobile_ui_perm() {
+  return array('administer jquerymobile_ui');
+}
+
+/* Alter the menu item to allow for jquery mobile specific settings */
+function jquerymobile_ui_form_alter(&$form, $form_state, $form_id) {
+  if ((isset($form['#node']) && $form['#node']->type .'_node_form' == $form_id) || ('menu_edit_item' == $form_id)) {
+    if ($form['#node']->type .'_node_form' == $form_id) { // It's the node edit form
+      $item = $form['#node']->menu;
+    }
+    else {
+      $item = $form['menu']['#item'];
+    }
+    
+    if (isset($form['menu'])) { // Check to see whether the menu form exists
+      $form['menu']['options'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('jQuery Mobile attributes'),
+          '#access' => user_access('administer jquerymobile_ui'),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+          '#tree' => TRUE,
+          '#weight' => 50,
+      );
+      $form['menu']['options']['jquerymobile_ui_attributes']['data-rel'] = array(
+        '#type' => 'select',
+        '#title' => t('data-rel attribute'),
+        '#default_value' => isset($item['options']['jquerymobile_ui_attributes']['data-rel']) ? $item['options']['jquerymobile_ui_attributes']['data-rel'] : '',
+        '#required' => FALSE,
+        '#options' => array(
+	        '' => t('default'),
+	        'dialog' => t('dialog'),
+        ),
+      );
+      
+      $form['menu']['options']['jquerymobile_ui_attributes']['data-ajax'] = array(
+        '#type' => 'select',
+        '#title' => t('data-ajax attribute'),
+        '#default_value' => isset($item['options']['jquerymobile_ui_attributes']['data-ajax']) ? $item['options']['jquerymobile_ui_attributes']['data-ajax'] : '',
+        '#required' => FALSE,
+        '#options' => array(
+	        '' => t('default'),
+	        'true' => t('true'),
+	        'false' => t('false'),
+        ),
+      );     
+      $form['menu']['options']['jquerymobile_ui_attributes']['data-role'] = array(
+        '#type' => 'select',
+        '#title' => t('data-role attribute'),
+        '#default_value' => isset($item['options']['jquerymobile_ui_attributes']['data-role']) ? $item['options']['jquerymobile_ui_attributes']['data-role'] : '',
+        '#required' => FALSE,
+        '#options' => array(
+	        '' => t('default'), 
+	        'list-divider' => t('List Divider')
+        ),
+      );
+      $form['menu']['options']['jquerymobile_ui_attributes']['data-theme'] = array(
+        '#type' => 'select',
+        '#title' => t('data-theme attribute'),
+        '#default_value' => isset($item['options']['jquerymobile_ui_attributes']['data-theme']) ? $item['options']['jquerymobile_ui_attributes']['data-theme'] : '',
+        '#required' => FALSE,
+        '#options' => array(
+					'' => t('default'),
+					'a' => t('Black'),
+					'b' => t('Blue'),
+					'c' => t('White'),
+					'd' => t('Grey'),
+					'e' => t('Yellow')
+				),
+      );
+      $form['menu']['options']['jquerymobile_ui_attributes']['data-icon'] = array(
+		    '#type'          => 'select',
+		    '#title'         => t('data-icon attribute'),
+		    '#default_value' => isset($item['options']['jquerymobile_ui_attributes']['data-icon']) ? $item['options']['jquerymobile_ui_attributes']['data-icon'] : '',
+		    '#options'       => array(
+					'' => t('default'),
+					'arrow-l' => t('Left arrow'),
+					'arrow-r' => t('Right arrow'),
+					'arrow-u' => t('Up arrow'),
+					'arrow-d' => t('Down arrow'),
+					'delete' => t('Delete'),
+					'plus' => t('Plus'),
+					'minus' => t('Minus'),
+					'check' => t('Check'),
+					'gear' => t('Gear'),
+					'refresh' => t('Refresh'),
+					'forward' => t('Forward'),
+					'back' => t('Back'),
+					'grid' => t('Grid'),
+					'star' => t('Star'),
+					'alert' => t('Alert'),
+					'info' => t('Info'),
+					'home' => t('Home'),
+					'search' => t('Search'),
+				),
+			);
+      $form['menu']['options']['jquerymobile_ui_attributes']['data-transition'] = array(
+        '#type' => 'select',
+        '#title' => t('data-transition attribute'),
+        '#default_value' => isset($item['options']['jquerymobile_ui_attributes']['data-transition']) ? $item['options']['jquerymobile_ui_attributes']['data-transition'] : '',
+        '#required' => FALSE,
+        '#options' => array(
+					'' => t('default'),
+					'a' => t('pop'),
+					'b' => t('flip'),
+					'c' => t('slidedown'),
+				),
+      );
+    }
+  }
+}
+
+
+function _jquerymobile_ui_menu_item_link($link) {
+  if (empty($link['localized_options'])) {
+    $link['localized_options'] = array();
+  }
+  
+  $attributes = array();
+	if (is_array($link['localized_options']['jquerymobile_ui_attributes'])) {
+	  foreach($link['localized_options']['jquerymobile_ui_attributes'] as $key => $value) {
+		  if($value != "") {
+		  	$attributes[$key] = $value;
+	  	}
+	  }
+	  $attributes['data-inline'] = "true";
+  }
+  
+  return '<li class="ITEM-LINK '. $class .'" ' . drupal_attributes($attributes) . ' >' . l($link['title'], $link['href'], $link['localized_options']) . '</li>';
+}
+
+
+function _jquerymobile_ui_menu_item($link, $has_children, $menu = '', $in_active_trail = FALSE, $extra_class = NULL) {
+  return $link . $menu ."\n";
+}
+
+function _jquerymobile_ui_get_custom_themes() {
+  $custom_themes = variable_get('jquerymobile_ui_custom_themes', '');
+  $custom_theme_sets = explode("\n", $custom_themes);
+  $options = array();
+  foreach ($custom_theme_sets as $key => $value) {
+	  $options[$custom_theme_sets[$key]] = $value;
+  }
+  
+	return $options;
+}

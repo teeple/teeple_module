@@ -1,0 +1,75 @@
+<?php
+/**
+ * @file
+ * Deployment module for book pages
+ */
+
+/**
+ * Implementation of hook_node_deploy(),
+ *
+ * @param $nid
+ *   Unique identifier for the node we're deploying.
+ * @return
+ *   The results of our xmlrpc call.
+ */
+
+function book_node_deploy($node) {
+  if (isset($node->book)) {
+    $parent = $node->book['plid'];
+    if ($parent <= 0) {
+      if (!isset($node->remote_nid)) {
+        // We are deploying a new book node, we'll need to set its book form
+        // element to the "create" option.
+        $node->book = array();
+        $node->book += _book_link_defaults('new');
+        $node->book['bid'] = 'new';
+        $node->book['plid'] = -1;
+      }
+      else {
+        // We are deploying a previously deployed top-level book page.
+        $remote_book = deploy_get_remote_book($node->uuid);
+        $node->book['nid'] = $remote_book['nid'];
+        $node->book['bid'] = $remote_book['bid'];
+        $node->book['plid'] = 0;
+      }
+    }
+    else {
+      $parent_nid = db_result(db_query("SELECT nid FROM {book} WHERE mlid = %d", $parent));
+      // We are deploying a child node, whose parent will have been already
+      // deployed so we need to get its remote parent id and bid.
+      $remote_parent = deploy_get_remote_book(deploy_uuid_get_node_uuid($parent_nid));
+      $node->book['bid'] = $remote_parent['bid'];
+      $node->book['plid'] = $remote_parent['mlid'];
+      $node->book['nid'] = isset($node->remote_nid) ? $node->remote_nid : 'new';
+    }
+  }
+}
+
+/**
+ * Implementation of hook_node_deploy_check().
+ *
+ * Used to manage deployment dependencies
+ *
+ * @param $nid
+ *   Unique identifier of the book we're trying to deploy
+ */
+function book_node_deploy_check($node) {
+  if (isset($node->book)) {
+    $parent = isset($node->book['plid']) ? $node->book['plid'] : 0;
+    if ($parent > 0) {
+      // We are deploying a child page and need to make sure the parent is added
+      // to the plan.
+      $parent_nid = db_result(db_query("SELECT nid FROM {book} WHERE mlid = %d", $parent));
+      $pid = variable_get('deploy_pid', 0);
+      // Does the parent node exist on the remote server?
+      $remote_key = deploy_get_remote_key(deploy_uuid_get_node_uuid($parent_nid), 'node');
+      // If it doesn't exist or the local version is newer, add it to the deployment plan, 
+      // with a weight of min(weight) - 1, and then run dependency checking on it
+      $plan_node = node_load($parent_nid);
+      if ($plan_node && (!$remote_key || $remote_key['changed'] < $plan_node->changed) && !deploy_item_is_in_plan($pid, 'node', $plan_node->nid)) {
+        deploy_add_to_plan($pid, 'node', $plan_node->type .': '. $plan_node->title, $plan_node->nid, deploy_get_min_weight($pid)-1, DEPLOY_NODE_GROUP_WEIGHT);
+        module_invoke_all('node_deploy_check', $plan_node);
+      }
+    }
+  }
+}

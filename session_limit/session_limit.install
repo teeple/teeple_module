@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * @file
+ * Contains install and update functions for Session Limit.
+ *
+ * @ingroup session_limit
+ */
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function session_limit_uninstall() {
+  variable_del('session_limit_max');
+  variable_del('session_limit_auto_drop');
+  variable_del('session_limit_masquerade_ignore');
+  db_query('DELETE FROM {variable} WHERE name LIKE "session_limit_rid_%"');
+}

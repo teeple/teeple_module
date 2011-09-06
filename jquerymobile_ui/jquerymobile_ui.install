@@ -1,0 +1,56 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Provides the install, update, and uninstall functions for the jquerymobile_ui module
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+/*
+function jquerymobile_ui_install() {
+	drupal_install_schema('jquerymobile_ui');
+}
+*/
+
+/**
+ * Implementation of hook_uninstall().
+ */
+/*
+function jquerymobile_ui_uninstall() {
+	drupal_uninstall_schema('jquerymobile_ui');
+ 	variable_del(); 
+
+}
+*/
+
+/*
+function jquerymobile_ui_schema() {
+  $schema['jquerymobile_ui'] = array(
+    'description' => 'The base table for module.', 
+    'fields' => array(
+      'jeid' => array(
+        'description' => 'The primary identifier for an entry.', 
+        'type' => 'serial', 
+        'unsigned' => TRUE, 
+        'not null' => TRUE,
+      ), 
+      'mlid' => array(
+        'description' => '', 
+        'type' => 'int', 
+        'unsigned' => TRUE, 
+        'not null' => TRUE, 
+        'default' => 0,
+      ), 
+
+    'unique keys' => array(
+      'jeid' => array('jeid'), 
+      'mlid' => array('mlid'),
+    ), 
+    'primary key' => array('jeid'),
+  );
+  return $schema;
+}
+*/

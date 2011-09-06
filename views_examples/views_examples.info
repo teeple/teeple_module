@@ -1,0 +1,16 @@
+; $Id: views_examples.info,v 1.1 2010/03/08 18:51:57 kepol Exp $
+
+name = "Views Examples"
+description = "A library of views examples. These can be edited or cloned and 
+changed as desired. Custom examples can be uploaded to the library."
+core = 6.x
+package = Views
+dependencies[] = views
+dependencies[] = php
+
+; Information added by drupal.org packaging script on 2010-10-20
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "views_examples"
+datestamp = "1287546072"
+

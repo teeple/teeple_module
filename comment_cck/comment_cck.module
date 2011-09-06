@@ -1,0 +1,262 @@
+<?php
+// $Id: comment_cck.module,v 1.13.2.1 2009/05/08 20:32:08 coreymitchell Exp $
+
+/**
+ * Implementation of hook_perm().
+ */
+function comment_cck_perm() {
+  return array('change cck fields through comments');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function comment_cck_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'comment_form' && user_access('change cck fields through comments')) {
+    $node = node_load($form['nid']['#value']);
+    // Check if any fields in this node type are comment_cck enabled.
+    if ($fields = variable_get('comment_cck_fields_'. $node->type, array())) {
+      // Include the functions to load the full node form.
+      module_load_include('inc', 'content', 'includes/content.node_form');
+      // This is a dummy node form, in which to gather the original fields.
+      $node_form['type'] = array(
+        '#type' => 'value',
+        '#value' => $node->type,
+      );
+      $node_form['#node'] = $node;
+      // This form will contain only the comment_cck enabled fields.
+      $final_form = $node_form;
+      $node_form = content_form($node_form, $form_state);
+
+      foreach ($fields as $field) {
+        if (isset($node_form[$field])) {
+          // Only add fields that are comment_cck enabled.
+          $final_form[$field] = $node_form[$field];
+          $form['#field_info'][$field] = $node_form['#field_info'][$field];
+        }
+      }
+
+      // If the fieldgroup module is installed, put fields into groups.
+      if (function_exists('fieldgroup_form_alter')) {
+        // Call fieldgroup_form_alter() to group the fields.
+        $final_form_id = $node->type .'_node_form';
+        fieldgroup_form_alter($final_form, array(), $final_form_id);
+      }
+      // Leaving the node type in the form causes it to output, so remove.
+      unset($final_form['type']);
+
+      // Add the comment_cck fields to comment_filter in order to postion it
+      // within the comment form.
+      $form['comment_filter']['comment_cck'] = $final_form;
+      // Set the position of the comment_cck fields within the comment form.
+      $form['comment_filter']['comment_cck']['#weight'] = -50;
+      // Set the comment_cck fields to output in the correct format.
+      $form['comment_filter']['comment_cck']['#tree'] = TRUE;
+    }
+    return;
+  }
+  if ($form_id == 'content_field_edit_form' && !$form_state['change_basic']) {
+    // Enable comment_ck to alter this field within this content type.
+    $form['widget']['comment_cck_enabled'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Allow comments to alter this field'),
+      '#description' => t('If checked, comments can alter this CCK field.'),
+      '#default_value' => in_array($form['field_name']['#value'], variable_get('comment_cck_fields_'. $form['type_name']['#value'], array())),
+    );
+    $form['#submit'][] = '_comment_cck_field_edit_form_submit';
+  }
+}
+
+function _comment_cck_field_edit_form_submit($form, &$form_state) {
+  $type_name = $form_state['values']['type_name'];
+  $field_name = $form_state['values']['field_name'];
+  if ($form_state['values']['comment_cck_enabled'] == TRUE) {
+    $fields = variable_get('comment_cck_fields_'. $type_name, array());
+    // Merge this field with other fields for this content type.
+    $fields = array_merge(array($field_name => $field_name), $fields);
+    variable_set('comment_cck_fields_'. $type_name, $fields);
+  }
+  else {
+    // Get the list of comment_cck enabled fields for this content type.
+    $fields = variable_get('comment_cck_fields_'. $type_name, array());
+    // Unset this field from the list.
+    unset($fields[$field_name]);
+    // Set the list of comment_cck enabled fields again.
+    variable_set('comment_cck_fields_'. $type_name, $fields);
+  }
+  return;
+}
+
+/**
+ * Implementation of hook_comment().
+ */
+function comment_cck_comment(&$comment, $op) {
+  // Ignore if a user without the correct permissions submitted this comment.
+  if (!user_access('change cck fields through comments') && $op != 'view') {
+    return;
+  }
+
+  switch ($op) {
+    case 'update':
+      $original_node = node_load($comment['nid']);
+      if ($fields = variable_get('comment_cck_fields_'. $original_node->type, array())) {
+        // Ungroup the fields in this comment, if necessary.
+        $comment_fields = _comment_cck_ungroup_fields($comment['comment_cck'], $fields, $original_node->type);
+        // Merge the updated fields in this comment with the original node.
+        $node = (object) array_merge((array) $original_node, $comment_fields);
+        // We don't want a node revision, since we're updating an old comment.
+        // @TODO: Do we?
+        $node->revision = 0;
+        $node->vid = db_result(db_query('SELECT vid FROM {comment_cck_revisions} WHERE cid = %d', $comment['cid']));
+        // Save the node with the updated field data.
+        node_save($node);
+      }
+      break;
+
+    case 'insert':
+      $original_node = node_load($comment['nid']);
+      if ($fields = variable_get('comment_cck_fields_'. $original_node->type, array())) {
+        // Ungroup the fields in this comment, if necessary.
+        $comment_fields = _comment_cck_ungroup_fields($comment['comment_cck'], $fields, $original_node->type);
+        // Merge the updated fields in this comment with the original node.
+        $node = (object) array_merge((array) $original_node, $comment_fields);
+        $previous_vid = $node->vid;
+        // We do want a node revision, since this is a new comment.
+        $node->revision = 1;
+        // Save the node with the updated field data.
+        node_save($node);
+        // Record that this comment added a node revision.
+        db_query('INSERT INTO {comment_cck_revisions} (cid, vid, previous_vid) VALUES (%d, %d, %d)', $comment['cid'], $node->vid, $previous_vid);
+        // Update the comment revision id.
+        // @TODO: What is this needed for?
+        $comment['revision_id'] = $node->vid;
+      }
+      break;
+
+    case 'view':
+      $node = node_load($comment->nid);
+      if ($fields = variable_get('comment_cck_fields_'. $node->type, array())) {
+        // We'll prepend the updated fields to the comment, not append.
+        $comment_text = $comment->comment;
+        // Get the comment_cck revisions associated with this comment.
+        $comment_revision = db_fetch_object(db_query('SELECT * FROM {comment_cck_revisions} WHERE cid = %d', $comment->cid));
+        if (!is_object($comment_revision)) {
+          // @TODO: Get this to work on preview. For now, degrade gracefully.
+          break;
+        }
+        if ($comment->op == t('Preview')) {
+          // @TODO: Is this a better way to check for preview? Get working!
+          break;
+        }
+        $current_node = _comment_cck_build_node((int) $comment->nid, $comment_revision->vid);
+        $previous_node = _comment_cck_build_node((int) $comment->nid, $comment_revision->previous_vid);
+        $cck_fields = content_types($node->type);
+
+        $result = array();
+        foreach ($fields as $field) {
+          // Check if the field was changed with this comment.
+          if ($current_node->$field != $previous_node->$field) {
+            // Render the current field.
+            $current_field = _comment_cck_render_field($field, $cck_fields, $current_node);
+            // Render the previous field.
+            $previous_field = _comment_cck_render_field($field, $cck_fields, $previous_node);
+            // Iterate over the current field values.
+            foreach ($current_field as $delta => $item) {
+              // Make sure they're different.
+              if ($item != $previous_field[$delta]) {
+                // They're different. Add them.
+                _comment_cck_rendering(TRUE);
+                $result[] = array($cck_fields['fields'][$field]['widget']['label'] .':&nbsp', drupal_render($previous_field[$delta]), "&raquo;", drupal_render($item));
+                _comment_cck_rendering(FALSE);
+              }
+            }
+          }
+        }
+        // If this comment changed any fields, update the comment output.
+        if (!empty($result)) {
+          drupal_add_css(drupal_get_path('module', 'comment_cck') .'/comment_cck.css');
+          // @TODO: Create template and preprocessing function.
+          $comment->comment = theme('table', array(), $result, array('class' => 'comment_cck')) . $comment_text;
+        }
+      }
+      break;
+  }
+  return $comment;
+}
+
+/**
+ * Build a node and it's content.
+ */
+function _comment_cck_build_node($criteria, $revision) {
+  $node = node_load($criteria, $revision);
+  $node = node_build_content($node);
+  return $node;
+}
+
+/**
+ * Render a field.
+ */
+function _comment_cck_render_field($field_name, $cck_fields, $node) {
+  // Mostly taken from content.module.
+  $field_types = _content_field_types();
+  $field = $cck_fields['fields'][$field_name];
+  $node_field = isset($node->$field_name) ? $node->$field_name : array();
+  $cck_submodule = $field_types[$field['type']]['module'];
+  $function = $cck_submodule .'_field';
+  if (function_exists($function)) {
+    $result = $function('view', $node, $field, $node_field, NULL, NULL);
+  }
+  if (!isset($result)) {
+    $result = content_field('view', $node, $field, $node_field, NULL, NULL);
+  }
+  $return = array();
+  if (is_array($result)) {
+    $return = $result;
+  }
+  elseif (isset($result)) {
+    $return[] = $result;
+  }
+  return $return;
+}
+
+/**
+ * Implementation of hook_preprocess_content_field().
+ */
+function comment_cck_preprocess_content_field(&$variables) {
+  if (_comment_cck_rendering()) {
+    // Hide the field labels as output by CCK.
+    $variables['label_display'] = 'hidden';
+  }
+}
+
+/**
+ * Flatten grouped fields.
+ */
+function _comment_cck_ungroup_fields($comment_fields, $fields, $node_type) {
+  // @TODO: I'm sure this can be improved, but it works for now.
+  if (module_exists('fieldgroup')) {
+    $comment_fields_flat = array();
+    foreach ($fields as $key => $field) {
+      if ($group_name = fieldgroup_get_group($node_type, $field)) {
+        if ($comment_fields[$group_name][$field]) {
+          $comment_fields_flat[$key] = $comment_fields[$group_name][$field];
+        }
+      }
+      else {
+        $comment_fields_flat[$key] = $comment_fields[$field];
+      }
+    }
+    return $comment_fields_flat;
+  }
+}
+
+/**
+ * Keep track if we're rendering a field for a comment rather than a node.
+ */
+function _comment_cck_rendering($set = NULL) {
+  static $rendering;
+  if (!is_null($set)) {
+    $rendering = $set;
+  }
+  return $rendering;
+}

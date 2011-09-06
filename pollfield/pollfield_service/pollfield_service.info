@@ -1,0 +1,7 @@
+; $Id$
+name = Pollfield Service
+description = Integrates pollfield functionality with Services
+package = Services - services
+dependencies[] = services
+dependencies[] = pollfield
+core = 6.x

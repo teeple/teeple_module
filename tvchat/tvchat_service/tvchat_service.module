@@ -1,0 +1,124 @@
+<?php
+
+function tvchat_service_perm() {
+    return array(
+        'tvchat_service from remote'
+    );
+}
+
+function tvchat_service_service() {
+  return array(
+
+	// program list 
+	array(
+	  '#method' => 'tvchat.all',
+	  '#callback' => 'tvchat_service_all',
+      '#file'     => array('file' => 'inc', 'module' => 'tvchat_service'),
+	  '#args' => array(
+			array(
+				'#name' => 'fields',
+				'#type' => 'array',
+				'#optional' => true,
+				'#description' => 'A list of fields to filter.'
+			)
+	  ),
+	  '#return' => 'array',
+	  '#help' => 'Returns a list of tv shows'
+  ),
+
+	// program detail
+	array(
+	  '#method' => 'tvchat.show',
+	  '#callback' => 'tvchat_service_show',
+    '#file'     => array('file' => 'inc', 'module' => 'tvchat_service'),
+	  '#args' => array(
+			array(
+				'#name' => 'nid',
+				'#type' => 'int',
+				'#optional' => false,
+				'#description' => 'detail program view'
+			)
+	  ),
+	  '#return' => 'array',
+	  '#help' => 'Returns tv show corresponding to nid'
+   	),
+
+	// is this program already flagged by user ? 
+	array(
+	  '#method' => 'tvchat.is_flagged',
+	  '#callback' => 'tvchat_service_is_flagged',
+    '#file'     => array('file' => 'inc', 'module' => 'tvchat_service'),
+	  '#access callback' => 'tvchat_service_is_flagged',
+	  '#args' => array(
+				array(
+					'#name' => 'flag_name',
+					'#type' => 'string',
+					'#optional' => false,
+					'#description' => 'flag_name (checkin or favorite) ' 
+				),
+				array(
+					'#name' => 'nid',
+					'#type' => 'int',
+					'#optional' => false,
+					'#description' => 'node id (program id)' 
+				),
+				array(
+					'#name' => 'uid',
+					'#type' => 'int',
+					'#optional' => false,
+					'#description' => 'user id (user account id)' 
+				)
+	  ),
+	  '#return' => 'boolean',
+	  '#help' => 'Returns if node_id is flagged by user(uid)'
+   	),
+
+	// do flag this program by user
+	array(
+	  '#method' => 'tvchat.do_flag',
+	  '#callback' => 'tvchat_service_do_flag',
+    '#file'     => array('file' => 'inc', 'module' => 'tvchat_service'),
+	  '#access callback' => 'tvchat_service_do_flag',
+	  '#args' => array(
+				array(
+					'#name' => 'flag_name',
+					'#type' => 'string',
+					'#optional' => false,
+					'#description' => 'flag_name (checkin or bookmark )'
+				),
+				array(
+					'#name' => 'nid',
+					'#type' => 'int',
+					'#optional' => false,
+					'#description' => 'node id (tv show)'
+				),
+				array(
+					'#name' => 'uid',
+					'#type' => 'int',
+					'#optional' => false,
+					'#description' => 'user id (tv show)'
+				)
+	  ),
+	  '#return' => 'boolean',
+	  '#help' => 'Add to my favorites'
+    ),
+
+    array(
+        '#method'   => 'tvchat.upload_contacts',
+        '#file'     => array('file' => 'inc', 'module' => 'tvchat_service'),
+        '#callback' => 'tvchat_service_upload_contacts',
+        '#access arguments'  => array('tvchat_service from remote'),
+        '#args'             => array(
+            array(
+                '#name'           => 'contacts_json',
+                '#type'           => 'array',
+                '#optional'       => false,
+                '#description'    => t('user contact list.'),
+            ),
+        ),
+        '#return'   => 'struct',
+        '#help'     => t('List of contact list.')
+    ),
+
+  );
+}

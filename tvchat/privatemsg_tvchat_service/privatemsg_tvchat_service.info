@@ -1,0 +1,12 @@
+name = Privatemsg Tvchat Service
+description = Extand Privatemsg Services functionality for Tvchat Service.
+package = Services - services
+dependencies[] = services
+dependencies[] = privatemsg
+core = 6.x
+
+; Information added by drupal.org packaging script on 2011-05-30
+version = "6.x-2.x-dev"
+core = "6.x"
+project = "privatemsg"
+datestamp = "1306715533"

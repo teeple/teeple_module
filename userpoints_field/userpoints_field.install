@@ -1,0 +1,23 @@
+<?php
+
+// $Id: userpoints_field.install,v 1.1 2011/01/10 22:53:38 lobo235 Exp $
+
+/**
+ * @file
+ */
+
+/**
+* Implementation of hook_install().
+*/
+function userpoints_field_install() {
+  drupal_set_message(t('User Points CCK Field has been successfully installed.'));
+  drupal_set_message(t('You can configure the User Points CCK Field module on the <a href="@url">User Points settings page</a>.', array('@url' => url('admin/settings/userpoints'))));
+}
+
+
+/**
+* Implementation of hook_uninstall().
+*/
+function userpoints_field_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name like 'userpoints_field%'");
+}

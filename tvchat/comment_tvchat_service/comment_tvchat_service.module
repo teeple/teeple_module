@@ -1,0 +1,38 @@
+<?php
+// $Id: comment_service.module,v 1.1.2.1.2.9 2010/07/16 02:59:56 skyredwang Exp $
+
+/**
+ * @file
+ *  Link commenting functionality to services module.
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function comment_tvchat_service_perm() {
+  return array('comment_tvchat_service from remote');
+}
+/**
+ * Implementation of hook_service().
+ */
+function comment_tvchat_service_service() {
+  return array(
+
+    // comment.delete
+    array(
+      '#method'   => 'comment.delete',
+      '#callback' => 'comment_tvchat_service_delete',
+      '#access arguments'  => array('comment_tvchat_service from remote'),
+      '#file'     => array('file' => 'inc', 'module' => 'comment_tvchat_service', 'file name' => 'comment_tvchat_service'),
+      '#args'      => array(
+        array(
+          '#name'         => 'cid',
+          '#type'         => 'int',
+          '#description'  => t('A comment id'),
+        ),
+      ),
+      '#return' => 'boolean',
+      '#help'   => t('This method delete a comment.'),
+    ),
+  );
+}

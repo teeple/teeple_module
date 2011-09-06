@@ -1,0 +1,164 @@
+<?php
+
+/**
+ * Implemetation of hook_perm()
+ */
+function event_service_perm() {
+  return array(
+    'event applying',
+    );
+}
+
+function event_service_service() {
+  return array(
+      array(
+      '#method' => 'event.get_remains',
+      '#callback' => 'event_service_get_remains',
+      '#access arguments'   => array('event_applying'),
+      '#args' => array(
+                 array(
+                    '#name' => 'nid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'event id'
+                 ),
+                 array(
+                    '#name' => 'uid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'user id'
+                 )
+      ),
+      '#return' => 'int',
+      '#help' => 'Returns user remaining event apply count'
+   	),
+
+    array(
+      '#method' => 'event.get_award_count',
+      '#callback' => 'event_service_get_award_count',
+      '#access arguments'   => array('event_applying'),
+      '#args' => array(
+                array(
+                    '#name' => 'nid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'event id'
+                 )
+      ),
+      '#return' => 'array',
+      '#help' => 'Returns event award count'
+   	),
+
+    array(
+      '#method' => 'event.get_applying_history',
+      '#callback' => 'event_service_get_applying_history',
+      '#access arguments'   => array('event_applying'),
+      '#args' => array(
+                 array(
+                    '#name' => 'nid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'event id'
+                 ),
+                 array(
+                    '#name' => 'uid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'user id'
+                 )
+      ),
+      '#return' => 'array',
+      '#help' => 'Returns user remaining event apply count'
+   	),
+
+    array(
+      '#method' => 'event.get_result',
+      '#callback' => 'event_service_get_result',
+      '#access arguments'   => array('event applying'),
+      '#args' => array(
+                 array(
+                    '#name' => 'nid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'event id'
+                 ),
+                 array(
+                    '#name' => 'uid',
+                    '#type' => 'int',
+                    '#optional' => false,
+                    '#description' => 'user id'
+                 )
+      ),
+      '#return' => 'int',
+      '#help' => 'Returns user applying result'
+   	)
+  );
+}
+
+function event_service_get_remains($nid, $uid) {
+	watchdog('event', 'get_remains.nid='.$nid.', uid='.$uid);
+  $sql = "SELECT count(*) FROM comments WHERE nid=%d and uid=%d"; 
+	$num_user_applying = db_result(db_query($sql, $nid, $uid));
+  $node = node_load($nid);
+  $remains = $node->field_apply_count[0]['value'] - $num_user_applying;
+  return $remains;
+}
+
+function event_service_get_award_count($nid) {
+	watchdog('event', 'get_award_count.nid='.$nid);
+  $nodes = array();
+  $counts = array();
+  $sql = "SELECT content_type_event_reward.nid"
+       ." FROM node node, content_type_event_reward"
+       ." WHERE node.nid = content_type_event_reward.field_event_nid AND node.nid = %d";
+  $result = db_query($sql, $nid);
+  while($reward_id = db_result($result)) {
+    $node = node_load($reward_id);
+    array_push($nodes, $node);
+    array_push($counts, $node->field_reward_count[0]['value']);
+  }
+  return $counts;
+}
+
+function event_service_get_applying_history($nid, $uid) {
+	watchdog('event', 'get_applying_history.nid='.$nid.', uid='.$uid);
+  $nodes = array();
+  $sql = "SELECT * FROM comments WHERE nid=%d and uid=%d";
+	$result = db_query($sql, $nid, $uid);
+  while($node = db_fetch_object($result)) {
+    array_push($nodes, $node);
+  }
+  return $nodes;
+}
+
+
+function event_service_get_result($nid, $uid) {
+	watchdog('event', 'get_result.nid='.$nid.', uid='.$uid);
+  $remains = event_service_get_remains($nid, $uid);
+  $result = 0;
+  if($remains <= 0) $result = -1;
+  $node = node_load($nid);
+  $max_count = $node->field_max_count[0]['value'];
+  $rand = rand(1, $max_count);
+  $award_count = event_service_get_award_count($nid);
+  $j = 0;
+  for($i = 0; $i < sizeof($award_count); $i++) {
+    $j += $award_count[$i];
+    if($rand < $j) $result = $i + 1;
+  }
+  if($result >= 0) {
+    $comment = array();
+    $comment['nid'] = $nid;
+    $comment['uid'] = $uid;
+    $comment['pid'] = 0;
+    $comment['subject'] = $result;
+    $comment['comment'] = $result;
+    $comment['status'] = 0;
+    $comment['format'] = 1;
+    dsm($comment);
+    comment_save($comment);
+  }
+  return $result;
+}
+
+

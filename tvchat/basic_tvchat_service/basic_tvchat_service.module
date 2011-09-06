@@ -1,0 +1,30 @@
+<?php
+
+function basic_tvchat_service_perm() {
+    return array(
+        'basic_tvchat_service from remote'
+    );
+}
+
+function basic_tvchat_service_service() {
+  return array(
+    array(
+        '#method'   => 'tvchat.upload_contacts',
+        '#file'     => array('file' => 'inc', 'module' => 'basic_tvchat_service'),
+        '#callback' => 'basic_tvchat_service_upload_contacts',
+        '#access arguments'  => array('basic_tvchat_service from remote'),
+        '#args'             => array(
+            array(
+                '#name'           => 'contacts_json',
+                '#type'           => 'array',
+                '#optional'       => false,
+                '#description'    => t('user contact list.'),
+            ),
+        ),
+        '#return'   => 'struct',
+        '#help'     => t('List of contact list.')
+    ),
+
+  );
+}
+

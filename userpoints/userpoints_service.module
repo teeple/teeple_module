@@ -1,0 +1,233 @@
+<?php
+// $Id: userpoints_service.module,v 1.1.4.2 2010/07/15 21:52:34 kbahey Exp $
+
+/**
+ * Implementation of hook_help().
+ */
+
+function userpoints_service_help($section) {
+  switch ($section) {
+    case 'admin/help#services_userpoints':
+    case 'admin/modules#description':
+      return t('<p>Provides Userpoints XML-RPC service. Requires services.module.</p>');
+  }
+}
+
+/**
+ * Implementation of hook_service().
+ */
+
+function userpoints_service_service() {
+  return array(
+
+    array(
+      '#method'   => 'userpoints.get',
+      '#callback' => 'userpoints_service_get',
+      '#args'     => array(
+        array(
+          '#name' => 'uid',
+          '#type' => 'int',
+          '#description' => t('A valid Drupal User ID.'),
+        ),
+        array(
+          '#name'        => 'tid',
+          '#type'        => 'int',
+          '#optional'    => TRUE,
+          '#description' => t('An optional Term ID for the category.'),
+        ),
+      ),
+      '#return'   => 'struct',
+      '#help'     => t('Retrieves the number of points the user has.')),
+
+   array(
+      '#method'   => 'userpoints.points',
+      '#callback' => 'userpoints_service_points',
+      '#args'     => array(
+        array(
+          '#name'        => 'uid',
+          '#type'        => 'int',
+          '#description' => t('A valid Drupal User ID.'),
+        ),
+        array(
+          '#name'        => 'points',
+          '#type'        => 'int',
+          '#description' => t('Number of points to add/subtract.'),
+        ),
+        array(
+          '#name'        => 'tid',
+          '#type'        => 'int',
+          '#optional'    => TRUE,
+          '#description' => t('An optional Term ID for the category.'),
+        ),
+        array(
+          '#name'        => 'event',
+          '#type'        => 'string',
+          '#optional'    => TRUE,
+          '#description' => t('An optional event ID for this transaction.'),
+        ),
+        array(
+          '#name'        => 'description',
+          '#type'        => 'string',
+          '#optional'    => TRUE,
+          '#description' => t('An optional description of this transaction.'),
+        ),
+      ),
+      '#return'   => 'struct',
+      '#help'     => t('Adds/subtracts points to a user.')),
+
+    array(
+      '#method'   => 'userpoints.points_history',
+      '#callback' => 'userpoints_service_points_history',
+      '#access arguments' => array('view own userpoints'),
+      '#args'     => array(
+        array(
+          '#name'        => 'uid',
+          '#type'        => 'int',
+          '#optional'    => TRUE,
+          '#description' => t('A valid Drupal User ID.'),
+        ),
+      ),
+      '#return'   => 'struct',
+      '#help'     => t('Points history of a user.')),
+
+  );
+}
+
+/**
+ * Get the number of points
+ */
+function userpoints_service_get($uid, $tid = NULL) {
+  if (!$uid) {
+    return services_error(t('User ID parameter is required.'));
+  }
+
+  $points = userpoints_get_current_points($uid, $tid);
+
+  $return = new stdClass();
+  $return->points = $points;
+
+  return $return;
+}
+
+/**
+ * Logout user
+ */
+function userpoints_service_points($uid, $points, $tid = NULL, $event = 'userpoints service', $description = NULL) {
+  if (!$uid) {
+    return services_error(t('User ID parameter is required.'));
+  }
+
+  if (!$points) {
+    return services_error(t('Points parameter must be a negative or positive number.'));
+  }
+
+  $params = array(
+    'uid'         => $uid,
+    'points'      => $points,
+    'tid'         => $tid,
+    'event'       => $event,
+    'description' => $description,
+    'display'     => FALSE,
+    'moderate'    => FALSE,
+  );
+
+  $result = userpoints_userpointsapi($params);
+
+  $return = new stdClass();
+
+  if (!$result['status']) {
+    $return->reason = $result['reason'];
+    $return->status = FALSE;
+  }
+  else {
+    $return->status = TRUE;
+  }
+
+  return $return;
+}
+
+function userpoints_service_points_history($uid) {
+
+  global $user;
+
+  if (!user_is_logged_in()) {
+    return services_error(t('This user is not logged in.'), 403);
+  }
+
+  $points_history = array();
+
+  $operations =array();
+  $operations['checkin'] = 'Flag Check In';
+  $operations['comment'] = 'Comment: tvshow';
+  $operations['follow'] = 'Flag FavoriteTVShow';
+  $operations['issue'] = 'Comment: issue';
+
+  // checkin points 
+  $_query = sprintf("SELECT entity_id, sum(points) sum_points, MAX(changed) changed FROM userpoints_txn WHERE uid = %d AND operation = '%s' GROUP BY entity_id ", $user->uid, $operations['checkin']);
+  $result = db_query($_query);
+
+  while ($element = db_fetch_object($result)) {
+    $points_history[$element->entity_id]['checkinPoints'] = $element->sum_points;
+    $points_history[$element->entity_id]['checkinPointsLastDate'] = $element->changed;
+  }
+
+  // comment points 
+  $_query = sprintf("SELECT entity_id, sum(points) sum_points, MAX(changed) changed FROM userpoints_txn WHERE uid = %d AND operation = '%s' GROUP BY entity_id ", $user->uid, $operations['comment']);
+  $result = db_query($_query);
+
+  while ($element = db_fetch_object($result)) {
+    $points_history[$element->entity_id]['commentPoints'] = $element->sum_points;
+    $points_history[$element->entity_id]['commentPointsLastDate'] = $element->changed;
+  }
+
+  // follow points 
+  $_query = sprintf("SELECT entity_id, sum(points) sum_points, MAX(changed) changed FROM userpoints_txn WHERE uid = %d AND operation = '%s' GROUP BY entity_id ", $user->uid, $operations['follow']);
+  $result = db_query($_query);
+
+  while ($element = db_fetch_object($result)) {
+    $points_history[$element->entity_id]['followPoints'] = $element->sum_points;
+    $points_history[$element->entity_id]['followPointsLastDate'] = $element->changed;
+  }
+
+  // issue points
+  $_query = sprintf("SELECT entity_id, sum(points) sum_points, MAX(changed) changed FROM userpoints_txn WHERE uid = %d AND operation = '%s' GROUP BY entity_id ", $user->uid, $operations['issue']);
+  $result = db_query($_query);
+
+  while ($element = db_fetch_object($result)) {
+    $points_history[$element->entity_id]['issuePoints'] = $element->sum_points;
+    $points_history[$element->entity_id]['issuePointsLastDate'] = $element->changed;
+  }
+
+  global $base_url;
+
+  $return_arr = array();
+
+  $index = 0;
+  foreach ($points_history as $key => $value) {
+    $node = node_load($key);
+
+    $element = array();
+    $element['showId'] = $key;
+    $element['showTitle'] = $node->title;
+    $element['showLogo'] = $base_url.'/'.$node->field_logo_image[0]['filepath'];
+
+    $element['issuePoints'] = $value['issuePoints'];
+    $element['issuePointsLastDate'] = date('YmdHi', $value['issuePointsLastDate']);
+
+    $element['commentPoints'] = $value['commentPoints'];
+    $element['commentPointsLastDate'] = date('YmdHi', $value['commentPointsLastDate']);
+
+    $element['followPoints'] = $value['followPoints'];
+    $element['followPointsLastDate'] = date('YmdHi', $value['followPointsLastDate']);
+
+    $element['checkinPoints'] = $value['checkinPoints'];
+    $element['checkinPointsLastDate'] = date('YmdHi', $value['checkinPointsLastDate']);
+
+    $index++;
+
+    $return_arr[] = $element;
+  }
+
+  return $return_arr;
+}
+

@@ -1,0 +1,92 @@
+<?php
+
+//setlocale(LC_ALL, 'ko_KR.UTF-8');
+/**
+ * Implemetation of hook_perm()
+ */
+function user_authentication_service_perm() {
+  return array(
+    'user_authentication_service from remote',
+    );
+}
+
+function user_authentication_service_service() {
+  return array(
+    array(
+      '#method' => 'user_authentication.sendInviteSMS',
+      '#callback' => 'user_authentication_service_send_invite_sms',
+      '#file'       => array('file' => 'inc', 'module' => 'user_authentication_service'),
+      '#access arguments'   => array('user_authentication_service from remote'),
+      '#args' => array(
+         array(
+            '#name' => 'phone_numbers',
+            '#type' => 'array',
+            '#optional' => false,
+            '#description' => 'frined phone number'
+         )
+      ),
+      '#return' => 'int',
+      '#help' => 'Request Invitation SMS, returns request result'
+   	),
+
+    array(
+      '#method' => 'user_authentication.sendAuthSMS',
+      '#callback' => 'user_authentication_service_send_auth_sms',
+      '#file'       => array('file' => 'inc', 'module' => 'user_authentication_service'),
+      '#access arguments'   => array('user_authentication_service from remote'),
+
+      '#args' => array(
+         array(
+            '#name' => 'phone_number',
+            '#type' => 'string',
+            '#optional' => false,
+            '#description' => 'Authentication phone number'
+         ),
+         array(
+            '#name' => 'country_code',
+            '#type' => 'string',
+            '#optional' => true,
+            '#description' => 'optiona, country code'
+         )
+      ),
+      '#return' => 'int',
+      '#help' => 'Request Authentication SMS, returns request result'
+   	),
+
+ 	// user authentication test
+    // 
+    array(
+      '#method' => 'user_authentication.test',
+      '#callback' => 'user_authentication_service_test',
+      '#file'       => array('file' => 'inc', 'module' => 'user_authentication_service'),
+      '#access arguments'   => array('user_authentication_service from remote'),
+      '#return' => 'array',
+      '#help' => 'Test'
+   	),
+ 
+ 	// user authentication authSMS
+    // 
+    array(
+      '#method' => 'user_authentication.authSMS',
+      '#callback' => 'user_authentication_service_auth_sms',
+      '#file'       => array('file' => 'inc', 'module' => 'user_authentication_service'),
+      '#access arguments'   => array('user_authentication_service from remote'),
+      '#args' => array(
+         array(
+            '#name' => 'phone_number',
+            '#type' => 'string',
+            '#optional' => false,
+            '#description' => 'Authentication phone number'
+        ),
+         array(
+            '#name' => 'auth_number',
+            '#type' => 'string',
+            '#optional' => false,
+            '#description' => 'Authentication number'
+        )
+      ),
+      '#return' => 'int',
+      '#help' => 'Request Authentication from SMS, returns Authentication Result'
+   	)
+  );
+}

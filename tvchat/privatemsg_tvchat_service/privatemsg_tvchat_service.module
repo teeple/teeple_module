@@ -1,0 +1,279 @@
+<?php
+
+// $Id$
+
+/**
+ * @file
+ *  Link general privatemsg module functionalities to services module.
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function privatemsg_tvchat_service_perm() {
+  return array(
+    'privatemsg_tvchat_service from remote',
+  );
+}
+
+/**
+ * Implementation of hook_service().
+ */
+function privatemsg_tvchat_service_service() {
+  return array(
+
+   array(
+        '#method'           => 'privatemsg.getUids',
+        '#callback'         => 'privatemsg_tvchat_service_get_uids',
+        '#access arguments' => array('privatemsg_tvchat_service from remote'),
+        '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+        '#args'             => array(
+            array(
+                  '#name'         => 'uid',
+                  '#type'         => 'int',
+                  '#optional'     => TRUE,
+                  '#description'  => t('The ID of the user who logged in.')
+                  ),
+              ),
+          '#return'           => 'array',
+          '#help'             => t('Get users who communicate with private messages.')
+    ),
+
+    array(
+      '#method'           => 'privatemsg.getMsg',
+      '#callback'         => 'privatemsg_tvchat_service_get_msg',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'fr_uid',
+          '#type'         => 'int',
+          '#optional'     => FALSE,
+          '#description'  => t('The friend\'s id')
+        ), 
+        array(
+          '#name'         => 'uid',
+          '#type'         => 'int',
+          '#optional'     => TRUE,
+          '#description'  => t('The ID of the user who logged in.')
+        ),
+                array(
+          '#name'           => 'offset',
+          '#type'           => 'int',
+          '#optional'       => TRUE,
+          '#description'    => t('An offset integer for paging.')
+        ),
+        array(
+          '#name'           => 'limit',
+          '#type'           => 'int',
+          '#optional'       => TRUE,
+          '#description'    => t('A limit integer for paging.')
+        ),
+
+      ),
+      '#return'           => 'array',
+      '#help'             => t('Get users who communicate with private messages.')
+    ),
+
+    array(
+      '#method'           => 'privatemsg.sendFrRequest',
+      '#callback'         => 'privatemsg_tvchat_service_send_fr_request',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'recipientUid',
+          '#type'         => 'int',
+          '#optional'     => FALSE,
+          '#description'  => t('The friend\'s id')
+        ), 
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Get users who communicate with private messages.')
+    ),
+
+
+    array(
+      '#method'           => 'privatemsg.getMsgWithRecipientUid',
+      '#callback'         => 'privatemsg_tvchat_service_get_msg_with_recipient_uid',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'recipient_uid',
+          '#type'         => 'int',
+          '#optional'     => FALSE,
+          '#description'  => t('The friend\'s id')
+        ), 
+        array(
+          '#name'         => 'offset',
+          '#type'         => 'int',
+          '#optional'     => TRUE,
+          '#description'  => t('Offset , default = 0')
+        ), 
+
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Get message list who communicate with private messages.')
+    ),
+
+    // privatemsg.getThread
+    array(
+      '#method'     => 'privatemsg.getThread',
+      '#callback'   => 'privatemsg_tvchat_service_get_thread',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'       => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'       => array(
+        array(
+            '#name'         => 'thread_id',
+            '#type'         => 'int',
+            '#description'=> t('The ID of the thread that should be retrieved.')
+        ),
+        array(
+            '#name'         => 'offset',
+            '#type'         => 'int',
+            '#optional'     => TRUE,
+            '#description'  => t('Message offset from the start of the thread.')
+                    ),
+                ),
+            '#return'           => 'array',
+            '#help'             => t('Get all messages in a thread. User needs to be logged in. Unless the logged-in user has the \'read all private messages\' permission, the user will only be able to get threads that he/she participated in.')
+         ),
+
+
+    array(
+      '#method'           => 'privatemsg.sendWithUids',
+      '#callback'         => 'privatemsg_tvchat_service_send_with_uids',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'recipient_uids',
+          '#type'         => 'array',
+          '#optional'     => FALSE,
+          '#description'  => t('Recipient uid list')
+        ), 
+        array(
+          '#name'         => 'body',
+          '#type'         => 'string',
+          '#optional'     => FALSE,
+          '#description'  => t('subject')
+        ), 
+        array(
+          '#name'         => 'subject',
+          '#type'         => 'string',
+          '#optional'     => TRUE,
+          '#description'  => t('subject')
+        ),
+        array(
+          '#name'         => 'fname',
+          '#type'         => 'string',
+          '#optional'     => TRUE,
+          '#description'  => t('file name')
+        ), 
+        array(
+          '#name'         => 'attachment',
+          '#type'         => 'string',
+          '#optional'     => TRUE,
+          '#description'  => t('attachment')
+        ), 
+        array(
+          '#name'         => 'sender_uid',
+          '#type'         => 'int',
+          '#optional'     => TRUE,
+          '#description'  => t('sender uid')
+        ), 
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Get message list who communicate with private messages.')
+    ),
+
+    array(
+      '#method'           => 'privatemsg.sendWithThreadId',
+      '#callback'         => 'privatemsg_tvchat_service_send_with_thread_id',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'author_uid',
+          '#type'         => 'int',
+          '#optional'     => FALSE,
+          '#description'  => t('Author\'s uid')
+        ), 
+        array(
+          '#name'         => 'body',
+          '#type'         => 'string',
+          '#optional'     => FALSE,
+          '#description'  => t('subject')
+        ), 
+        array(
+          '#name'         => 'thread_id',
+          '#type'         => 'int',
+          '#optional'     => FALSE,
+          '#description'  => t('subject')
+        ), 
+        array(
+          '#name'         => 'fname',
+          '#type'         => 'string',
+          '#optional'     => TRUE,
+          '#description'  => t('subject')
+        ), 
+        array(
+          '#name'         => 'attachment',
+          '#type'         => 'string',
+          '#optional'     => TRUE,
+          '#description'  => t('subject')
+        ), 
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Get message list who communicate with private messages with thread id.')
+    ),
+
+    array(
+      '#method'           => 'privatemsg.getThreadIdForFriend',
+      '#callback'         => 'privatemsg_tvchat_service_get_thread_id_for_friend',
+      '#access arguments' => array('privatemsg_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'friend_uid',
+          '#type'         => 'int',
+          '#optional'     => FALSE,
+          '#description'  => t('Friends\' user id')
+        ), 
+        array(
+          '#name'         => 'author_id',
+          '#type'         => 'int',
+          '#optional'     => TRUE,
+          '#description'  => t('author id')
+        ), 
+      ),
+      '#return'           => 'int',
+      '#help'             => t('Get thread id for friend.')
+    ),
+
+    array(
+      '#method'           => 'privatemsg.getMessages',
+      '#callback'         => 'privatemsg_tvchat_service_get_messages',
+      '#access arguments' => array('privatemgs_tvchat_service from remote'),
+      '#file'             => array('file' => 'inc', 'module' => 'privatemsg_tvchat_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'mids',
+          '#type'         => 'array',
+          '#optional'     => FALSE,
+          '#description'  => t('message ids')
+        ), 
+        array(
+          '#name'         => 'uid',
+          '#type'         => 'int',
+          '#optional'     => TRUE,
+          '#description'  => t('author id, default: logged user')
+        ), 
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Get message array for each mid.')
+    ),
+
+ );
+}

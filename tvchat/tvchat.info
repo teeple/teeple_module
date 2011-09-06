@@ -1,0 +1,5 @@
+;$Id$
+name = "TV Chat"
+description = "TV 프로그램과 연관된 채팅, 커뮤니티 서비스 제공"
+core = 6.x
+php = 5.3

@@ -1,0 +1,15 @@
+name = FullCalendar
+description = Provides a views style plugin for FullCalendar
+core = 6.x
+package = "Views"
+dependencies[] = views
+dependencies[] = date
+dependencies[] = jquery_ui
+dependencies[] = jquery_update
+
+; Information added by drupal.org packaging script on 2011-04-24
+version = "6.x-1.4"
+core = "6.x"
+project = "fullcalendar"
+datestamp = "1303660315"
+
