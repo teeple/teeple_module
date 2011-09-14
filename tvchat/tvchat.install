@@ -259,6 +259,51 @@ function tvchat_schema() {
     ),
   );
 
+  $schema['c2dm_messages'] = array(
+    'fields' => array(
+      'pid' => array(
+        'type' => 'serial',
+        'length' => 9,
+        'unsigned' => TRUE,
+      ),
+        'sender' => array(	
+            'type' => 'int',
+            'length'    => 10,
+        ),
+        'receiver' => array(
+            'type' => 'int',
+            'length'    => 10,
+        ),
+        'device_token' => array(
+            'type' => 'varchar',
+            'unsigned' => TRUE,
+            'length'    => 64,
+        ),
+        'message' => array(	
+            'type' => 'varchar',
+            'length' => 255,
+        ),
+        'badge' => array(	
+            'type' => 'int',
+        ),
+        'delivery' => array(	
+            'type' => 'int',
+            'default' => 0,
+        ),
+        'status' => array(
+            'type' => 'varchar',
+            'length' => 20,
+            'default' => 'queued',
+        ),			
+        'created' => array(	
+            'type' => 'int',
+        ),
+        'modified' => array(	// timestamp
+            'type' => 'int',
+        ),
+    ),
+  );
+
   $schema['telink_sms'] = array(
     'description' => t('TODO: please describe this table!'),
     'fields' => array(

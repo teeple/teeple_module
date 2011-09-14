@@ -205,7 +205,7 @@ function _calculate_tvshow($table, $array_operation, $timestamp_from, $timestamp
           $count ++;
 
           $timestamp_from = $timestamp_from - 86400 * 7;
-          $_query = sprintf("select entity_id, sum(points) points ROM userpoints_txn WHERE operation in ('%s') and time_stamp between %d and %d AND uid != 1 Group By entity_id HAVING points > 0 ORDER BY points DESC", implode("','", $array_operation['tvshow']), $timestamp_from , $timestamp_to);
+          $_query = sprintf("select entity_id, sum(points) points FROM userpoints_txn WHERE operation in ('%s') and time_stamp between %d and %d AND uid != 1 Group By entity_id HAVING points > 0 ORDER BY points DESC", implode("','", $array_operation['tvshow']), $timestamp_from , $timestamp_to);
           $query = db_query($_query);
           $num_rows = db_affected_rows();
       }
@@ -898,32 +898,23 @@ function tvchat_send_message($authorId=0, $recipientUids, $message, $badge=0) {
 
     $senderId = $authorId == 0 ? 1 : $authorId;
 
+    $timestamp = time();
+
     foreach($recipientUids as $uid) {
         $account = user_load($uid);
 
-        if(isset($account->profile_APNS_token)) {
-            _send_apns_message($senderId, $uid, $message, $badge);
+        if(!empty($account->profile_APNS_token)) {
+            $table_name = 'apns_messages';
+            $device_token = $account->profile_APNS_token;
 
-        } else if (isset($account->profile_C2DM_token)) {
-            _send_c2dm_message($senderId, $uid, $message, $badge);
-
+        } else if (!empty($account->profile_C2DM_token)) {
+            $table_name = 'c2dm_messages';
+            $device_token = $account->profile_C2DM_token;
         }
-    }
-}
-
-function _send_apns_message($senderId=0, $recipientUid, $message, $badge=0) {
-
-    $account = user_load($recipientUid);
-    $timestamp = time();
-
-    if(!empty($account)) {
-
-        $device_token = empty($account->profile_APNS_token) ? '': $account->profile_APNS_token;
-        if(empty($device_token)) return false;
 
         $element = array(
             'sender' => $senderId,
-            'receiver' => $recipientUid,
+            'receiver' => $uid,
             'device_token' => $device_token,
             'message' => $message,
             'badge' => $badge,
@@ -931,94 +922,12 @@ function _send_apns_message($senderId=0, $recipientUid, $message, $badge=0) {
             'created' => $timestamp,
             'modified' => $timestamp
         );
-        drupal_write_record('apns_messages', $element);
+        error_log('table_name: '.$table_name);
+        error_log('device_token: '.$device_token);
+
+        drupal_write_record($table_name, $element);
     }
     return true;
-}
-
-function _send_c2dm_message($senderId=0, $recipientUid, $message, $badge=0) {
-
-    $account_sender = user_load($senderId);
-
-    //구글에서 Auth 값 얻어오기
-    $data = "&accountType=HOSTED_OR_GOOGLE&Email=newbiz.uangel@gmail.com&Passwd=newbiz.123&service=ac2dm&source=com.uangel.com";
-
-    $host = "www.google.com";
-    $path = "/accounts/ClientLogin";
-
-    $fp = fsockopen("ssl://".$host, 443, $errno, $errstr, 30);
-
-    if($fp)
-    {
-        fputs($fp, "POST $path HTTP/1.0\r\n"); 
-        fputs($fp, "Host: $host\r\n"); 
-        fputs($fp, "User-Agent: PHP Script\r\n"); 
-        fputs($fp, "Content-Type: application/x-www-form-urlencoded\r\n"); 
-        fputs($fp, "Content-Length: " . strlen($data) . "\r\n"); 
-        fputs($fp, "Connection: close\r\n\r\n"); 
-        fputs($fp, $data . "\r\n\r\n"); 
-        $data = '';
-        while (!feof($fp)) { 
-            $data .= fgets($fp); 
-        }
-        fclose($fp);
-    } else {
-        //error
-        echo "$errstr ($errno)\n";
-        return 0;
-    }
-
-    $response = split("\r\n\r\n", $data);
-    $header = $response[0];
-    $responsecontent = $response[1];
-    if(!(strpos($header,"Transfer-Encoding: chunked")===false)){ 
-        $aux=split("\r\n",$responsecontent); 
-        for($i=0;$i<count($aux);$i++) 
-            if($i==0 || ($i%2==0)) 
-                $aux[$i]=""; 
-        $responsecontent=implode("",$aux); 
-    }
-
-    $tmp = split("Auth=",$responsecontent);
-    $result = $tmp[1];
-
-    // 
-    $account = user_load($recipientUid);
-    $auth = $account->profile_C2DM_token;
-
-    //얻어온 Auth 값 토대로 Device에 PUSH하기
-    /*
-    $auth = "APA91bFl0a2gh963rI0y3Tu2vtF8PV*************************************OIWawTL6JvDwzpToDjtA1WSjXLh8IYrsI";
-    */
-    $message_json = sprintf("{'aps':{'alert':'[%s]%s','badge':%d,'sound':'default'},'senderUid':%d}", $account->profile_nickname, $message, $badge, $senderUid);
-
-    $data = "registration_id=".$auth."&collapse_key=1&data.message=".$message_json;
-
-    $host = "android.apis.google.com";
-    $path = "/c2dm/send";
-
-    $fp = fsockopen("ssl://".$host, 443, $errno, $errstr, 30);
-
-    if($fp)
-    {
-        fputs($fp, "POST $path HTTP/1.0\r\n");
-        fputs($fp, "Host: $host\r\n");
-        fputs($fp, "Content-Type: application/x-www-form-urlencoded\r\n");
-        fputs($fp, "Content-Length: " . strlen($data) . "\r\n");
-        fputs($fp, "Authorization: GoogleLogin auth={$result}\r\n");
-        fputs($fp, $data . "\r\n\r\n"); 
-
-        $data = '';
-        //while (!feof($fp)) { 
-        //  $data .= fgets($fp, 4096); 
-        //}
-
-        fclose($fp);
-    } else {
-        //error
-        echo "$errstr ($errno)\n";
-        return 0;
-    }
 }
 
 function tvchat_form() {
@@ -1045,14 +954,9 @@ function tvchat_my_form($form_state) {
 }
 
 function tvchat_my_form_submit($form, $form_state) {
-
-    /*
-    $_query = sprintf("UPDATE tvchat_ranking_weekly SET entity_nid = %d WHERE entity_nid = %d AND target_date ='%s'", $form_state['values']['new_nid'], $form_state['values']['nid'], $form_state['values']['target_date']);
-    db_query($_query);
-    */
     module_load_include('inc', 'views_service');
 
-    $ret = views_service_get('admin_user_page', 'list_all_users_page', null, 0, 0, FALSE);
+    // $ret = views_service_get('admin_user_page', 'list_all_users_page', null, 0, 0, FALSE);
 
-    rules_invoke_event('push_bulk_message', $message, $recipient_uids);
+    rules_invoke_event('push_bulk_message', $form_state['values']['message'], $recipient_uids);
 }

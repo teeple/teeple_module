@@ -26,7 +26,7 @@
  */
 function views_service_get($view_name, $display_id = 'default', $args = array(), $offset = 0, $limit = 0, $format_output = FALSE) {
 
-  // error_log('views_service: '.$view_name);
+  error_log('views_service: '.$view_name);
   // watchdog('views_service', $view_name);
 
   $result = array();
