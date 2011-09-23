@@ -3,13 +3,42 @@
 
 function custom_views_views_pre_execute(&$view) {
 
+    module_load_include('inc','tvchat');
+
 if($view->name=="list_board_json")
     {
-     $view->build_info['query']= 
 
+     $showId = $view->args[0];
+     $issueIds = tvchat_issue_nids($showId);
+
+     if(!empty($issueIds)) {
+         $ext_query = 
+            sprintf("UNION
+    
+            SELECT 
+                node.nid AS nid, 
+                node.type AS node_type, 
+                node.title AS node_title,
+                '' AS customfield_markup_2, 
+                '' AS customfield_markup_3, 
+                '' AS customfield_markup_4, 
+                '' AS customfield_markup_5, 
+                '' AS customfield_markup_6, 
+                '' AS customfield_markup_7, 
+                '' AS customfield_markup_8, 
+                '' AS customfield_markup_9, 
+                '' AS customfield_markup_10, 
+                '' AS customfield_markup_11, 
+                node_revisions.body AS node_revisions_body, 
+                '' AS customfield_markup_12, 
+                '' AS customfield_markup_14, 
+                node.title AS node_title
+            FROM node node  LEFT JOIN node_revisions node_revisions ON node.vid = node_revisions.vid WHERE (node.type in ('forum', 'issue_poll')) AND (node.nid IN (%s)) 
+        ", join(',',$issueIds));
+     }
      // query for get_show_json 
      // 
-     "
+     $query = sprintf("
      SELECT 
         node.nid AS nid, 
         node.type AS node_type, 
@@ -28,30 +57,9 @@ if($view->name=="list_board_json")
         node_revisions.format AS node_revisions_format, 
         '' AS customfield_markup_15,
         node.title AS issue_title
-    FROM node node  LEFT JOIN content_type_tvshow node_data_field_logo_image ON node.vid = node_data_field_logo_image.vid LEFT JOIN content_field_operator node_data_field_operator ON node.vid = node_data_field_operator.vid LEFT JOIN node_revisions node_revisions ON node.vid = node_revisions.vid WHERE (node.type in ('tvshow')) AND (node.nid = 21240) GROUP BY nid
+    FROM node node  LEFT JOIN content_type_tvshow node_data_field_logo_image ON node.vid = node_data_field_logo_image.vid LEFT JOIN content_field_operator node_data_field_operator ON node.vid = node_data_field_operator.vid LEFT JOIN node_revisions node_revisions ON node.vid = node_revisions.vid WHERE (node.type in ('tvshow')) AND (node.nid = %d) GROUP BY nid", $showId);
 
-    UNION
-    
-    SELECT 
-        node.nid AS nid, 
-        node.type AS node_type, 
-        node.title AS node_title,
-        '' AS customfield_markup_2, 
-        '' AS customfield_markup_3, 
-        '' AS customfield_markup_4, 
-        '' AS customfield_markup_5, 
-        '' AS customfield_markup_6, 
-        '' AS customfield_markup_7, 
-        '' AS customfield_markup_8, 
-        '' AS customfield_markup_9, 
-        '' AS customfield_markup_10, 
-        '' AS customfield_markup_11, 
-        node_revisions.body AS node_revisions_body, 
-        '' AS customfield_markup_12, 
-        '' AS customfield_markup_14, 
-        node.title AS node_title
-    FROM node node  LEFT JOIN node_revisions node_revisions ON node.vid = node_revisions.vid WHERE (node.type in ('forum', 'issue_poll')) AND (node.nid IN (25816, 25815, 21240)) 
-	";
+     $view->build_info['query'] = empty($ext_query) ? $query : $query.' '.$ext_query;
 
     //count_query determines the pager.  Do this so the right item count is returned. If you don't do this, you'll only return the query amount
    	$view->build_info['count_query']=$view->build_info['query'];

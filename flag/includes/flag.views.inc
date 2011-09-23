@@ -1,5 +1,4 @@
 <?php
-// $Id: flag.views.inc,v 1.1.2.9.2.1 2010/12/20 13:47:17 mooffie Exp $
 
 /**
  * @file
@@ -101,25 +100,10 @@ function flag_views_data() {
     ),
   );
 
-  // youngmin, 2011.6.14
-  //
-
   // Argument for content ID, used for "Who's flagged this" views.
   $data['flag_content']['content_id'] = array(
     'title' => t('Content ID'),
     'help' => t('The unique ID of the object that has been flagged.'),
-    'relationship' => array(
-      'base' => 'node',
-      'handler' => 'views_handler_relationship',
-      'label' => t('Node'),
-    ),
-    'field' => array(
-      'handler' => 'views_handler_field_numeric',
-      'click sortable' => TRUE,
-    ),
-   'filter' => array(
-      'handler' => 'views_handler_filter_numeric',
-    ),
     'argument' => array(
       'handler' => 'flag_handler_argument_content_id',
     ),
@@ -175,35 +159,37 @@ function flag_views_data_alter(&$data) {
     $flag = flag_flag::factory_by_content_type($flag_type);
     $info = $flag->get_views_info();
 
-    // Add the flag relationship.
-    $data[$info['views table']]['flag_content_rel'] = array(
-      'group' => t('Flags'),
-      'title' => $info['title'],
-      'help' => $info['help'],
-      'relationship' => array(
-        'flag type' => $flag_type,
-        'handler' => 'flag_handler_relationship_content',
-        'label' => t('flag'),
-        'base' => 'flag_content',
-        'base field' => 'content_id',
-        'relationship field' => $info['join field'],
-      ),
-    );
+    if(!empty($info['join field'])) {
+      // Add the flag relationship.
+      $data[$info['views table']]['flag_content_rel'] = array(
+        'group' => t('Flags'),
+        'title' => $info['title'],
+        'help' => $info['help'],
+        'relationship' => array(
+          'flag type' => $flag_type,
+          'handler' => 'flag_handler_relationship_content',
+          'label' => t('flag'),
+          'base' => 'flag_content',
+          'base field' => 'content_id',
+          'relationship field' => $info['join field'],
+        ),
+      );
 
-    // Add the flag counter relationship.
-    $data[$info['views table']]['flag_count_rel'] = array(
-      'group' => t('Flags'),
-      'title' => $info['counter title'],
-      'help' => $info['counter help'],
-      'relationship' => array(
-        'flag type' => $flag_type,
-        'handler' => 'flag_handler_relationship_counts',
-        'label' => t('counter'),
-        'base' => 'flag_counts',
-        'base field' => 'content_id',
-        'relationship field' => $info['join field'],
-      ),
-    );
+      // Add the flag counter relationship.
+      $data[$info['views table']]['flag_count_rel'] = array(
+        'group' => t('Flags'),
+        'title' => $info['counter title'],
+        'help' => $info['counter help'],
+        'relationship' => array(
+          'flag type' => $flag_type,
+          'handler' => 'flag_handler_relationship_counts',
+          'label' => t('counter'),
+          'base' => 'flag_counts',
+          'base field' => 'content_id',
+          'relationship field' => $info['join field'],
+        ),
+      );
+    }
   }
 
   // Add a relationship for the user that flagged any type of content.

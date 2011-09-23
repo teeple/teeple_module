@@ -62,7 +62,6 @@ function views_service_get($view_name, $display_id = 'default', $args = array(),
   else {
 
     // only for logging
-    /*
     {
         $view->execute();
         $result = $view->result;
@@ -76,9 +75,8 @@ function views_service_get($view_name, $display_id = 'default', $args = array(),
           }
           $result = $nodes;
         }
-        // watchdog('return_view', $view_name.print_r($result, TRUE));
+        watchdog('return_view', $view_name.print_r($result, TRUE));
     }
-    */
 
     // We want to keep the result an array.
     $result[] = $view->preview($display_id);

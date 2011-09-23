@@ -1,5 +1,4 @@
 <?php
-// $Id: flag.services.inc,v 1.1.2.1 2009/11/02 21:20:06 quicksketch Exp $
 
 /**
  * @file
@@ -70,8 +69,6 @@ function flag_service_flag($flag_name, $content_id, $uid = NULL, $action = 'flag
   $account = empty($uid) ? $user : user_load($uid);
   $flag = flag_get_flag($flag_name);
   $skip_permission_check = (boolean) $skip_permission_check;
-
-//	watchdog('flag', $action.'uid='.$account->uid.' content='.$content_id.print_r($flag, TRUE));
   return $flag->flag($action, $content_id, $account, $skip_permission_check);
 }
 
