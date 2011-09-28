@@ -37,7 +37,6 @@ function json_server_server() {
 if (!isset($_POST)) {
   return drupal_to_js(array('#error' => TRUE, '#data' => "JSON server accepts POST requests only."));
 }
-
   $methods = services_get_all();
 
   watchdog('json rcvd', 'post='.print_r($_POST,TRUE));

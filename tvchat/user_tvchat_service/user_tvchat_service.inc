@@ -74,6 +74,7 @@ function _user_save_picture($uid, $fname, $picture) {
 function _account_reset($uid, $email) {
 
   tvchat_log('account_reset uid:'.$uid.' email:'.$email);
+  watchdog('account_reset', 'uid:'.$uid.' email:'.$email);
 
   $account = user_load($uid);
   $ret_array = array();
@@ -88,13 +89,15 @@ function _account_reset($uid, $email) {
   $edit = array(
     'profile_password_temp' => $password_tmp
   );
+
+  watchdog('account_reset', 'email:'.$email.' password:'.$password_tmp);
   tvchat_user_save_profile($edit, $account, 'Personal information');
 
   rules_invoke_event('account_reset', $account, $password_tmp);
 
-  /*
   // flagging this user for rule activation
   // 
+  /*
   $flag = flag_get_flag('account_reset');
   if($flag){
 
