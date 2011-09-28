@@ -173,7 +173,10 @@ function anonymous_tvchat_service_login($name, $password, $phone_number=null) {
     return $return;
  }
 
- session_destroy();
+ if(isset($user->sid)) {
+    session_destroy();
+ }
+
  // return services_error(t('Wrong username or password. '), 401);
   return services_error(t('Wrong username or password. '), 401);
 }

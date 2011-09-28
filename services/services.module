@@ -865,7 +865,10 @@ function services_session_load($sessid) {
 
   // Make backup of current user and session data
   $backup = $user;
-  $backup->session = session_encode();
+
+  if(isset($user->sid)) {
+    $backup->session = session_encode();
+  }
 
   // Empty current session data
   $_SESSION = array();
